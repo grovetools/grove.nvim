@@ -8,10 +8,11 @@ import (
 var rootCmd *cobra.Command
 
 func init() {
-	rootCmd = cli.NewStandardCommand("neogrove", "Neovim plugin for grove")
+	rootCmd = cli.NewStandardCommand("neogrove", "A helper binary for the grove-nvim Neovim plugin.")
 
 	// Add commands
 	rootCmd.AddCommand(newVersionCmd())
+	rootCmd.AddCommand(newChatCmd())
 }
 
 func Execute() error {
