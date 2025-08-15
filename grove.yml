@@ -4,3 +4,5 @@ type: go
 binary:
   name: neogrove
   path: ./bin/neogrove
+
+

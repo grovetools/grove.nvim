@@ -13,6 +13,7 @@ func init() {
 	// Add commands
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newChatCmd())
+	rootCmd.AddCommand(newPlanCmd())
 }
 
 func Execute() error {
