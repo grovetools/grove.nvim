@@ -23,6 +23,7 @@ func newChatCmd() *cobra.Command {
 			}
 
 			// Construct the command to run: `flow chat run <file_path>`
+			// #nosec G204 -- filePath comes from validated user input
 			flowCmd := exec.Command("flow", "chat", "run", filePath)
 
 			// Pipe the stdout and stderr directly to the parent process (Neovim)

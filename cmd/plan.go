@@ -89,7 +89,7 @@ func newPlanStatusCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// Build flow command with plan name
 			flowArgs := []string{"plan", "status", args[0]}
-			
+
 			// Pass through any additional flags
 			found := false
 			for _, arg := range os.Args {
@@ -100,7 +100,7 @@ func newPlanStatusCmd() *cobra.Command {
 					found = true
 				}
 			}
-			
+
 			return runFlowCommand(flowArgs...)
 		},
 	}
