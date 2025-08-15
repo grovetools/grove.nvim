@@ -1,0 +1,6 @@
+name: grove-nvim
+description: Neovim plugin for grove
+type: go
+binary:
+  name: neogrove
+  path: ./bin/neogrove
