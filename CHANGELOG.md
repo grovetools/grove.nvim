@@ -1,3 +1,21 @@
+## v0.0.2 (2025-08-15)
+
+### Features
+
+* add Grove Plan support with multi-select dependencies
+* implement GroveChatRun command for Neovim
+
+### Bug Fixes
+
+* update root command
+* lint
+* update gitignore
+
+### Chores
+
+* **deps:** bump dependencies
+* bump deps
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
