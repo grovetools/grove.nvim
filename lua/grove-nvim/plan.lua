@@ -1,4 +1,23 @@
 local M = {}
+local ui = require('grove-nvim.ui')
+
+-- Helper function to create centered dropdown config
+local function centered_dropdown(width, height)
+  return {
+    preset = "dropdown",
+    preview = false,
+    layout = {
+      width = width,
+      height = height,
+    },
+    win = {
+      position = {
+        row = "50%",
+        col = "50%",
+      },
+    },
+  }
+end
 
 -- Helper to run a command and capture output
 local function run_command(cmd_args, callback)
@@ -41,15 +60,193 @@ local function run_in_float_term(command)
   vim.cmd('startinsert')
 end
 
+-- Helper to run a command in a true terminal (no Neovim hijacking)
+local function run_in_true_term(command)
+  -- Use a full window for better TUI rendering
+  vim.cmd('tabnew')
+  
+  -- Start the terminal with proper environment for TUI
+  local job_id = vim.fn.termopen(command, {
+    env = {
+      TERM = 'xterm-256color',
+      COLORTERM = 'truecolor',
+    },
+    on_exit = function()
+      -- Close the tab when done
+      vim.schedule(function()
+        vim.cmd('tabclose')
+      end)
+    end
+  })
+  
+  -- Enter terminal mode immediately for proper TUI interaction
+  vim.cmd('startinsert')
+  
+  -- Disable UI elements that interfere with TUI
+  vim.opt_local.number = false
+  vim.opt_local.relativenumber = false
+  vim.opt_local.signcolumn = 'no'
+  vim.opt_local.foldcolumn = '0'
+  vim.opt_local.scrolloff = 0
+  vim.opt_local.sidescrolloff = 0
+  
+  -- Ensure the terminal gets full window size
+  vim.cmd('set laststatus=0')
+  vim.cmd('set showtabline=0')
+  
+  -- Restore on exit
+  vim.api.nvim_create_autocmd("TabClosed", {
+    callback = function()
+      vim.cmd('set laststatus=2')
+      vim.cmd('set showtabline=1')
+    end,
+    once = true
+  })
+end
+
 -- Initialize a new plan
 function M.init()
-  vim.ui.input({ prompt = 'New Plan Name: ' }, function(name)
+  ui.input({ prompt = 'New Plan Name: ', title = 'Create New Plan' }, function(name)
     if not name or name == '' then
       vim.notify('Grove: Plan creation cancelled.', vim.log.levels.WARN)
       return
     end
-    vim.notify('Grove: Creating plan in current project plans directory...', vim.log.levels.INFO)
-    run_in_float_term('neogrove plan init ' .. vim.fn.shellescape(name))
+
+    local plan_config = { name = name }
+
+    -- This function will be called after all config has been gathered
+    local function create_plan()
+      vim.notify('Grove: Creating plan: ' .. plan_config.name, vim.log.levels.INFO)
+      local neogrove_path = vim.fn.exepath('neogrove')
+      if neogrove_path == '' then
+        vim.notify("Grove: neogrove not found in PATH", vim.log.levels.ERROR)
+        return
+      end
+
+      local init_args = { neogrove_path, 'plan', 'init', plan_config.name }
+      if plan_config.model and plan_config.model ~= "" then
+        table.insert(init_args, '--model')
+        table.insert(init_args, plan_config.model)
+      end
+      if plan_config.worktree and plan_config.worktree ~= "" then
+        table.insert(init_args, '--worktree')
+        table.insert(init_args, plan_config.worktree)
+      end
+      if plan_config.container and plan_config.container ~= "" then
+        table.insert(init_args, '--target-agent-container')
+        table.insert(init_args, plan_config.container)
+      end
+
+      run_command(init_args, function(stdout, stderr, exit_code)
+        if exit_code == 0 then
+          vim.notify('Grove: Plan "' .. plan_config.name .. '" created. Now add the first job.', vim.log.levels.INFO)
+          vim.schedule(function()
+            M.add_job_wizard(plan_config.name)
+          end)
+        else
+          if stderr:match("already exists") or stderr:match("directory exists") then
+            local has_snacks, snacks = pcall(require, 'snacks')
+            if has_snacks and snacks.picker then
+              local options = {
+                { text = "➕ Add a job to existing plan", value = "add_job" },
+                { text = "📋 View plan status", value = "view_status" },
+                { text = "🔄 Overwrite plan (use --force)", value = "overwrite" },
+                { text = "❌ Cancel", value = "cancel" },
+              }
+              snacks.picker({
+                title = "Plan '" .. plan_config.name .. "' already exists",
+                items = options,
+                format = "text",
+                layout = centered_dropdown(50, #options + 4),
+                confirm = function(picker, item)
+                  picker:close()
+                  if item then
+                    if item.value == "add_job" then
+                      vim.schedule(function() M.add_job_wizard(plan_config.name) end)
+                    elseif item.value == "view_status" then
+                      vim.schedule(function() M.status(plan_config.name) end)
+                    elseif item.value == "overwrite" then
+                      table.insert(init_args, '--force')
+                      run_command(init_args, function(stdout2, stderr2, exit_code2)
+                        if exit_code2 == 0 then
+                          vim.notify('Grove: Plan "' .. plan_config.name .. '" created (overwritten). Now add first job.', vim.log.levels.INFO)
+                          vim.schedule(function() M.add_job_wizard(plan_config.name) end)
+                        else
+                          vim.notify('Grove: Failed to overwrite plan: ' .. stderr2, vim.log.levels.ERROR)
+                        end
+                      end)
+                    else
+                      vim.notify('Grove: Cancelled plan creation', vim.log.levels.INFO)
+                    end
+                  end
+                end,
+              })
+            else
+              ui.input({ prompt = 'Plan already exists. Add job? (y/N): ', title = 'Plan Exists', default = 'n' }, function(res)
+                if res and (res:lower() == 'y' or res:lower() == 'yes') then
+                  vim.schedule(function() M.add_job_wizard(plan_config.name) end)
+                else
+                  vim.notify('Grove: Using existing plan "' .. plan_config.name .. '"', vim.log.levels.INFO)
+                end
+              end)
+            end
+          else
+            vim.notify('Grove: Failed to create plan: ' .. stderr, vim.log.levels.ERROR)
+          end
+        end
+      end)
+    end
+
+    local function get_container_and_create()
+      ui.input({ prompt = 'Default Agent Container (optional): ', title = 'Plan Config' }, function(container)
+        if container == nil then
+          return vim.notify('Grove: Plan creation cancelled.', vim.log.levels.WARN)
+        end
+        plan_config.container = container
+        create_plan()
+      end)
+    end
+
+    local function get_worktree_and_continue()
+      ui.input({ prompt = 'Default Worktree (optional): ', title = 'Plan Config' }, function(worktree)
+        if worktree == nil then
+          return vim.notify('Grove: Plan creation cancelled.', vim.log.levels.WARN)
+        end
+        plan_config.worktree = worktree
+        get_container_and_create()
+      end)
+    end
+
+    -- Ask for default model
+    M.get_models(function(models)
+      local model_items = { { text = "🤖 Use system default model", value = "" } }
+      for _, model in ipairs(models) do
+        table.insert(model_items, { text = "└─ " .. model.id, value = model.id })
+      end
+
+      local has_snacks, snacks = pcall(require, 'snacks')
+      if has_snacks and snacks.picker then
+        snacks.picker({
+          title = "Select Default Model for Plan",
+          items = model_items,
+          format = "text",
+          layout = centered_dropdown(60, math.min(#model_items + 4, 20)),
+          confirm = function(picker_model, model_item)
+            picker_model:close()
+            plan_config.model = model_item and model_item.value or ""
+            get_worktree_and_continue()
+          end,
+        })
+      else
+        ui.input({ prompt = 'Default Model (optional): ', title = 'Plan Config' }, function(model)
+          if model == nil then
+            return vim.notify('Grove: Plan creation cancelled.', vim.log.levels.WARN)
+          end
+          plan_config.model = model
+          get_worktree_and_continue()
+        end)
+      end
+    end)
   end)
 end
 
@@ -84,6 +281,7 @@ function M.show_plan_actions(plan_name, plan_data)
     { text = "📋 View Status", action = "status", desc = "Show detailed plan status" },
     { text = "▶️  Run Plan", action = "run", desc = "Execute the plan" },
     { text = "➕ Add Job", action = "add", desc = "Add a new job to the plan" },
+    { text = "⚙️  Configure Plan", action = "config", desc = "View or edit plan configuration" },
     { text = "🔄 Refresh", action = "refresh", desc = "Refresh plan list" },
   }
   
@@ -91,14 +289,7 @@ function M.show_plan_actions(plan_name, plan_data)
     title = "Plan Actions: " .. plan_name,
     items = actions,
     format = "text",
-    layout = {
-      preset = "dropdown",
-      preview = false,
-      layout = {
-        width = 50,
-        height = #actions + 4,
-      },
-    },
+    layout = centered_dropdown(50, #actions + 4),
     confirm = function(picker, item)
       picker:close()
       if item.action == "status" then
@@ -106,11 +297,78 @@ function M.show_plan_actions(plan_name, plan_data)
       elseif item.action == "run" then
         M.run(plan_name)
       elseif item.action == "add" then
-        M.add_job_wizard(plan_name)
+        M.add_job_form(plan_name)
+      elseif item.action == "config" then
+        M.show_config_actions(plan_name)
       elseif item.action == "refresh" then
         vim.schedule(function()
           M.picker()
         end)
+      end
+    end,
+  })
+end
+
+-- Show plan configuration actions menu
+function M.show_config_actions(plan_name)
+  local has_snacks, snacks = pcall(require, 'snacks')
+  if not (has_snacks and snacks.picker) then
+    return vim.notify('Grove: snacks.nvim is required', vim.log.levels.ERROR)
+  end
+
+  local config_actions = {
+    { text = "📄 View Configuration", action = "view" },
+    { text = "🤖 Set Default Model", action = "set_model" },
+    { text = "🌳 Set Default Worktree", action = "set_worktree" },
+    { text = "📦 Set Default Agent Container", action = "set_container" },
+    { text = "↩️  Back to Plan Actions", action = "back" },
+  }
+
+  local function handle_set(key)
+    return function(value)
+      if value == nil then
+        return vim.notify("Grove: Action cancelled.", vim.log.levels.WARN)
+      end
+      local neogrove_path = vim.fn.exepath('neogrove')
+      run_command({ neogrove_path, 'plan', 'config', plan_name, '--set', key .. '=' .. value }, function(_, stderr, exit_code)
+        if exit_code == 0 then
+          vim.notify("Grove: Plan configuration updated.", vim.log.levels.INFO)
+        else
+          vim.notify("Grove: Failed to update config: " .. stderr, vim.log.levels.ERROR)
+        end
+      end)
+    end
+  end
+
+  snacks.picker({
+    title = "Configure Plan: " .. plan_name,
+    items = config_actions,
+    format = "text",
+    layout = centered_dropdown(50, #config_actions + 4),
+    confirm = function(picker, item)
+      picker:close()
+      if not item then return end
+
+      if item.action == "view" then
+        run_in_float_term('neogrove plan config ' .. vim.fn.shellescape(plan_name))
+      elseif item.action == "set_model" then
+        M.get_models(function(models)
+          local model_items = {}
+          for _, model in ipairs(models) do table.insert(model_items, { text = model.id, value = model.id }) end
+          snacks.picker({
+            title = "Select New Default Model",
+            items = model_items,
+            format = "text",
+            layout = centered_dropdown(60, math.min(#model_items + 4, 20)),
+            confirm = function(p, i) p:close(); if i then handle_set('model')(i.value) end end,
+          })
+        end)
+      elseif item.action == "set_worktree" then
+        ui.input({ prompt = "New Worktree (leave empty to clear): " }, handle_set('worktree'))
+      elseif item.action == "set_container" then
+        ui.input({ prompt = "New Agent Container (leave empty to clear): " }, handle_set('target_agent_container'))
+      elseif item.action == "back" then
+        vim.schedule(function() M.show_plan_actions(plan_name) end)
       end
     end,
   })
@@ -166,295 +424,227 @@ function M.get_templates(callback)
   end)
 end
 
--- Add job wizard with template selection
-function M.add_job_wizard(plan_path)
-  local has_snacks, snacks = pcall(require, 'snacks')
-  if not (has_snacks and snacks.picker) then
-    -- Fallback to simple input
-    M.add_job_simple(plan_path)
+-- Get available models
+function M.get_models(callback)
+  local neogrove_path = vim.fn.exepath('neogrove')
+  if neogrove_path == '' then
+    callback({})
     return
   end
-  
-  -- Job configuration
-  local job_config = {
-    plan = plan_path,
-    title = "",
-    type = "agent",
-    template = "",
-    prompt = "",
-    source_files = {},
-    depends_on = {},
-  }
-  
-  -- Step 1: Get job title
-  vim.ui.input({ prompt = 'Job Title: ' }, function(title)
-    if not title or title == '' then
-      vim.notify('Grove: Job creation cancelled.', vim.log.levels.WARN)
+
+  run_command({ neogrove_path, 'models', 'list', '--json' }, function(stdout, stderr, exit_code)
+    if exit_code ~= 0 or stdout == "" then
+      vim.notify("Grove: Could not fetch models. " .. stderr, vim.log.levels.WARN)
+      callback({})
       return
     end
-    job_config.title = title
-    
-    -- Step 2: Select job type
-    local job_types = {
-      { text = "🤖 Interactive Agent - Agent that can interact with tools", value = "interactive_agent" },
-      { text = "🧠 Agent - Standard agent job", value = "agent" },
-      { text = "💻 Shell - Execute shell commands", value = "shell" },
-      { text = "⚡ One Shot - Single execution job", value = "oneshot" },
-    }
-    
-    snacks.picker({
-      title = "Select Job Type",
-      items = job_types,
-      format = "text",
-      layout = {
-        preset = "dropdown",
-        preview = false,
-        layout = {
-          width = 60,
-          height = #job_types + 4,
-        },
-      },
-      confirm = function(picker, item)
-        picker:close()
-        if not item then
-          vim.notify('Grove: Job creation cancelled.', vim.log.levels.WARN)
-          return
-        end
-        job_config.type = item.value
-        
-        -- Step 3: Select template (optional)
-        M.get_templates(function(templates)
-          if #templates > 0 then
-            -- Add "No template" option
-            local template_items = {{ text = "✨ No template - Start from scratch", value = "" }}
-            for _, template in ipairs(templates) do
-              -- Handle both lowercase and uppercase field names
-              local name = template.name or template.Name or template.id
-              local description = template.description or template.Description
-              local template_text = string.format("📝 %s", name)
-              if description and description ~= "" then
-                template_text = template_text .. " - " .. description
+
+    local ok, data = pcall(vim.json.decode, stdout)
+    if ok and data and data.models then
+      callback(data.models)
+    else
+      -- Fallback: try parsing without --json flag
+      run_command({ neogrove_path, 'models', 'list' }, function(stdout2, stderr2, exit_code2)
+        if exit_code2 == 0 and stdout2 ~= "" then
+          local model_list = {}
+          for line in stdout2:gmatch("[^\n]+") do
+            if not line:match("^ID") and line:match("%S") then -- Skip header and empty
+              local id = line:match("^%s*([^%s]+)")
+              if id then
+                table.insert(model_list, { id = id, provider = "unknown" })
               end
-              table.insert(template_items, {
-                text = template_text,
-                value = name,
-              })
             end
-            
-            snacks.picker({
-              title = "Select Template (Optional)",
-              items = template_items,
-              format = "text",
-              layout = {
-                preset = "dropdown",
-                preview = false,
-                layout = {
-                  width = 60,
-                  height = math.min(#template_items + 4, 20),
-                },
-              },
-              confirm = function(picker2, template_item)
-                picker2:close()
-                if template_item and template_item.value ~= "" then
-                  job_config.template = template_item.value
-                end
-                
-                -- Step 4: Get prompt (if no template)
-                if job_config.template == "" then
-                  vim.ui.input({ prompt = 'Job Prompt: ', completion = "file" }, function(prompt)
-                    if prompt then  -- Even if empty string, continue
-                      job_config.prompt = prompt
-                      -- Step 5: Select dependencies
-                      M.select_dependencies(job_config)
-                    else
-                      -- User cancelled
-                      vim.notify('Grove: Job creation cancelled.', vim.log.levels.WARN)
-                    end
-                  end)
-                else
-                  -- Step 5: Select dependencies
-                  M.select_dependencies(job_config)
-                end
-              end,
-            })
-          else
-            -- No templates available, get prompt
-            vim.ui.input({ prompt = 'Job Prompt: ', completion = "file" }, function(prompt)
-              if prompt then  -- Even if empty string, continue
-                job_config.prompt = prompt
-                -- Step 5: Select dependencies
-                M.select_dependencies(job_config)
-              else
-                -- User cancelled
-                vim.notify('Grove: Job creation cancelled.', vim.log.levels.WARN)
-              end
-            end)
           end
-        end)
-      end,
-    })
+          callback(model_list)
+        else
+          callback({})
+        end
+      end)
+    end
   end)
 end
 
--- Select dependencies for the job
-function M.select_dependencies(job_config)
-  local has_snacks, snacks = pcall(require, 'snacks')
-  if not has_snacks then
-    -- Skip dependency selection if snacks is not available
-    M.create_job(job_config)
-    return
-  end
-  
-  -- Get existing jobs in the plan
+-- Get dependencies helper function
+local function get_dependencies(plan_path, callback)
   local neogrove_path = vim.fn.exepath('neogrove')
   if neogrove_path == '' then
-    M.create_job(job_config)
+    callback({})
     return
   end
-  
-  -- Get plan status to extract job list
-  local cmd_args = { neogrove_path, 'plan', 'status', job_config.plan, '--json' }
+
+  local cmd_args = { neogrove_path, 'plan', 'status', plan_path, '--json' }
   run_command(cmd_args, function(stdout, stderr, exit_code)
     if exit_code ~= 0 or stdout == "" then
-      -- Error getting plan status or no output
-      M.create_job(job_config)
+      callback({})
       return
     end
-    
-    
-    -- Parse JSON output
+
     local ok, plan_data = pcall(vim.json.decode, stdout)
-    if not ok or not plan_data then
-      -- Failed to parse JSON
-      M.create_job(job_config)
+    if not ok or not plan_data or not plan_data.jobs or #plan_data.jobs == 0 then
+      callback({})
       return
     end
-    
-    if not plan_data.jobs or #plan_data.jobs == 0 then
-      -- No jobs to depend on
-      M.create_job(job_config)
-      return
-    end
-    
-    -- Create items for dependency selection
-    local job_items = {{ text = "➖ No dependencies - Start independently", value = nil }}
+
+    local job_items = {}
     for _, job in ipairs(plan_data.jobs) do
-      local status_icon = "📋"  -- Default job icon
-      if job.status == "completed" then
-        status_icon = "✅"
-      elseif job.status == "failed" then
-        status_icon = "❌"
-      elseif job.status == "running" then
-        status_icon = "🏃"
-      elseif job.status == "pending" then
-        status_icon = "⏳"
+      local status_icon = "📋" -- Default job icon
+      if job.status == "completed" then status_icon = "✅"
+      elseif job.status == "failed" then status_icon = "❌"
+      elseif job.status == "running" then status_icon = "🏃"
+      elseif job.status == "pending" then status_icon = "⏳"
       end
-      
+
       local job_text = string.format("%s %s - %s", status_icon, job.filename or job.id, job.title or "Untitled")
       table.insert(job_items, {
         text = job_text,
         value = job.filename or job.id,
-        selectable = true,
       })
     end
-    
-    vim.schedule(function()
-      snacks.picker({
-        title = "Select Dependencies (Space to toggle, Enter to confirm)",
-        items = job_items,
-        format = "text",
-        layout = {
-          preset = "dropdown",
-          preview = false,
-          layout = {
-            width = 70,
-            height = math.min(#job_items + 4, 20),
-          },
-        },
-        confirm = function(picker, item)
-          -- Get all selected items for multi-select
-          local selected = picker:selected({ fallback = true })
-          picker:close()
-          
-          if selected and #selected > 0 then
-            job_config.depends_on = {}
-            for _, sel_item in ipairs(selected) do
-              if sel_item.value then  -- Skip "No dependencies" option
-                table.insert(job_config.depends_on, sel_item.value)
-              end
-            end
-          end
-          M.create_job(job_config)
-        end,
-        win = {
-          list = {
-            keys = {
-              ["<Space>"] = { "select", desc = "Toggle Selection" },
-              ["<Tab>"] = { "select_and_next", desc = "Select and Next" },
-              ["<S-Tab>"] = { "select_and_prev", desc = "Select and Previous" },
-            },
-          },
-        },
+    callback(job_items)
+  end)
+end
+
+-- Get plan configuration defaults
+local function get_plan_defaults(plan_path, callback)
+  local neogrove_path = vim.fn.exepath('neogrove')
+  if neogrove_path == '' then
+    callback({ model = "", worktree = "" })
+    return
+  end
+
+  local cmd_args = { neogrove_path, 'plan', 'config', plan_path, '--json' }
+  run_command(cmd_args, function(stdout, stderr, exit_code)
+    if exit_code ~= 0 or stdout == "" then
+      callback({ model = "", worktree = "" })
+      return
+    end
+
+    local ok, config = pcall(vim.json.decode, stdout)
+    if ok and config then
+      callback({
+        model = config.model or "",
+        worktree = config.worktree or ""
       })
+    else
+      callback({ model = "", worktree = "" })
+    end
+  end)
+end
+
+-- Add job form - new unified form interface
+function M.add_job_form(plan_path)
+  vim.notify("Grove: Loading job data...", vim.log.levels.INFO)
+
+  -- Fetch all required data asynchronously before showing the form
+  get_plan_defaults(plan_path, function(plan_defaults)
+    M.get_templates(function(templates)
+      get_dependencies(plan_path, function(dependencies)
+        M.get_models(function(models)
+        -- Prepare data for the form
+        local job_types = {
+          { text = "💬 Chat - Conversational interaction", value = "chat" },
+          { text = "🤖 Interactive Agent - Agent that can interact with tools", value = "interactive_agent" },
+          { text = "🧠 Agent - Standard agent job", value = "agent" },
+          { text = "💻 Shell - Execute shell commands", value = "shell" },
+          { text = "⚡ One Shot - Single execution job", value = "oneshot" },
+        }
+
+        local template_items = { { text = "✨ No template - Start from scratch", value = "" } }
+        for _, t in ipairs(templates) do
+          local name = t.name or t.Name or t.id
+          local desc = t.description or t.Description
+          table.insert(template_items, { text = ("📝 %s%s"):format(name, desc and " - " .. desc or ""), value = name })
+        end
+
+        -- Prepare model options
+        local model_items = {}
+        if plan_defaults.model ~= "" then
+          table.insert(model_items, { text = "📋 Use plan default: " .. plan_defaults.model, value = "" })
+        end
+        for _, m in ipairs(models) do
+          table.insert(model_items, { text = "🤖 " .. m.id, value = m.id })
+        end
+
+        -- Define the form structure
+        local form_fields = {
+          { name = 'title',      label = 'Title',         type = 'text',           value = "" },
+          { name = 'type',       label = 'Job Type',      type = 'select',         value = "agent", options = job_types },
+          { name = 'template',   label = 'Template',      type = 'select',         value = "",      options = template_items },
+          { name = 'prompt',     label = 'Prompt',        type = 'text',           value = "",      help = "Additional prompt (optional with template)" },
+          { name = 'depends_on', label = 'Dependencies',  type = 'multiselect',    value = {},      options = dependencies },
+          { name = 'model',      label = 'Model',         type = 'select',         value = "",      options = model_items, 
+            condition = function(data) return data.type == "oneshot" end,
+            help = "Model override for oneshot jobs" },
+          { name = 'worktree',   label = 'Worktree',      type = 'text',           value = plan_defaults.worktree, 
+            help = "Git worktree (default: " .. (plan_defaults.worktree ~= "" and plan_defaults.worktree or "none") .. ")" },
+        }
+
+        ui.form({ title = "Create New Job in '" .. plan_path .. "'", fields = form_fields }, function(result)
+          if not result then return vim.notify("Grove: Job creation cancelled.", vim.log.levels.WARN) end
+          result.plan = plan_path
+          M.create_job(result)
+        end)
+        end)
+      end)
     end)
   end)
 end
+
 
 -- Create the job with the collected configuration
 function M.create_job(config)
+  local neogrove_path = vim.fn.exepath('neogrove')
+  if neogrove_path == '' then
+    vim.notify("Grove: neogrove not found in PATH", vim.log.levels.ERROR)
+    return
+  end
+
   local cmd_parts = {
-    'neogrove', 'plan', 'add', vim.fn.shellescape(config.plan),
-    '--title', vim.fn.shellescape(config.title),
+    neogrove_path, 'plan', 'add', config.plan,
+    '--title', config.title,
     '--type', config.type
   }
   
-  if config.template ~= "" then
+  if config.template and config.template ~= "" then
     table.insert(cmd_parts, '--template')
-    table.insert(cmd_parts, vim.fn.shellescape(config.template))
+    table.insert(cmd_parts, config.template)
   end
   
-  if config.prompt ~= "" then
+  if config.prompt and config.prompt ~= "" then
     table.insert(cmd_parts, '--prompt')
-    table.insert(cmd_parts, vim.fn.shellescape(config.prompt))
+    table.insert(cmd_parts, config.prompt)
   end
-  
+
   if config.depends_on and #config.depends_on > 0 then
     for _, dep in ipairs(config.depends_on) do
       table.insert(cmd_parts, '--depends-on')
-      table.insert(cmd_parts, vim.fn.shellescape(dep))
+      table.insert(cmd_parts, dep)
     end
   end
-  
-  local cmd = table.concat(cmd_parts, ' ')
-  vim.notify('Grove: Creating job...', vim.log.levels.INFO)
-  run_in_float_term(cmd)
-end
 
--- Simple add job (fallback)
-function M.add_job_simple(plan_path)
-  vim.ui.input({ prompt = 'Job Title: ' }, function(title)
-    if not title or title == '' then
-      vim.notify('Grove: Job creation cancelled.', vim.log.levels.WARN)
-      return
+  if config.model and config.model ~= "" then
+    table.insert(cmd_parts, '--model')
+    table.insert(cmd_parts, config.model)
+  end
+
+  if config.worktree and config.worktree ~= "" then
+    table.insert(cmd_parts, '--worktree')
+    table.insert(cmd_parts, config.worktree)
+  end
+
+  vim.notify('Grove: Creating job...', vim.log.levels.INFO)
+
+  run_command(cmd_parts, function(stdout, stderr, exit_code)
+    if exit_code == 0 then
+      vim.notify('Grove: Job "' .. config.title .. '" created successfully.', vim.log.levels.INFO)
+      -- Refresh the plan list to show the new job/plan
+      vim.schedule(M.picker)
+    else
+      vim.notify('Grove: Failed to create job: ' .. stderr, vim.log.levels.ERROR)
     end
-    
-    vim.ui.input({ prompt = 'Job Prompt: ' }, function(prompt)
-      if not prompt or prompt == '' then
-        vim.notify('Grove: Job creation cancelled.', vim.log.levels.WARN)
-        return
-      end
-      
-      local cmd = string.format(
-        'neogrove plan add %s --title %s --prompt %s',
-        vim.fn.shellescape(plan_path),
-        vim.fn.shellescape(title),
-        vim.fn.shellescape(prompt)
-      )
-      
-      run_in_float_term(cmd)
-    end)
   end)
 end
+
 
 -- Create the plan picker with snacks.nvim
 function M.picker()
@@ -595,6 +785,48 @@ function M.picker()
       })
     end)
   end)
+end
+
+-- Get the active plan from .grove/state.yml
+function M.get_active_plan()
+  local state_file = vim.fn.getcwd() .. '/.grove/state.yml'
+  if vim.fn.filereadable(state_file) == 0 then
+    return nil
+  end
+  
+  local lines = vim.fn.readfile(state_file)
+  for _, line in ipairs(lines) do
+    local plan = line:match("^active_plan:%s*(.+)%s*$")
+    if plan then
+      return plan
+    end
+  end
+  
+  return nil
+end
+
+-- Add job to active plan using form
+function M.add_job_to_active_plan()
+  local active_plan = M.get_active_plan()
+  if not active_plan then
+    vim.notify("Grove: No active plan found. Use 'flow plan set <plan>' to set one.", vim.log.levels.ERROR)
+    return
+  end
+  
+  M.add_job_form(active_plan)
+end
+
+-- Add job to plan using TUI
+function M.add_job_tui(plan_path)
+  if not plan_path then
+    plan_path = M.get_active_plan()
+    if not plan_path then
+      vim.notify("Grove: No active plan found. Use 'flow plan set <plan>' to set one.", vim.log.levels.ERROR)
+      return
+    end
+  end
+  
+  run_in_true_term('flow plan add -i ' .. vim.fn.shellescape(plan_path))
 end
 
 return M

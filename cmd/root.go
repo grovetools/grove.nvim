@@ -14,6 +14,7 @@ func init() {
 	rootCmd.AddCommand(newVersionCmd())
 	rootCmd.AddCommand(newChatCmd())
 	rootCmd.AddCommand(newPlanCmd())
+	rootCmd.AddCommand(newModelsCmd())
 }
 
 func Execute() error {

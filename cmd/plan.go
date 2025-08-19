@@ -23,6 +23,7 @@ func newPlanCmd() *cobra.Command {
 	planCmd.AddCommand(newPlanAddCmd())
 	planCmd.AddCommand(newPlanRunCmd())
 	planCmd.AddCommand(newPlanTemplateListCmd())
+	planCmd.AddCommand(newPlanConfigCmd())
 
 	return planCmd
 }
@@ -46,14 +47,43 @@ func runFlowCommand(args ...string) error {
 
 // newPlanInitCmd wraps `flow plan init`.
 func newPlanInitCmd() *cobra.Command {
-	return &cobra.Command{
+	var (
+		force                bool
+		model                string
+		worktree             string
+		targetAgentContainer string
+	)
+
+	cmd := &cobra.Command{
 		Use:   "init <directory-name>",
 		Short: "Initialize a new plan directory",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return runFlowCommand("plan", "init", args[0])
+			flowArgs := []string{"plan", "init", args[0]}
+
+			if force {
+				flowArgs = append(flowArgs, "--force")
+			}
+			if model != "" {
+				flowArgs = append(flowArgs, "--model", model)
+			}
+			if worktree != "" {
+				flowArgs = append(flowArgs, "--worktree", worktree)
+			}
+			if targetAgentContainer != "" {
+				flowArgs = append(flowArgs, "--target-agent-container", targetAgentContainer)
+			}
+
+			return runFlowCommand(flowArgs...)
 		},
 	}
+
+	cmd.Flags().BoolVarP(&force, "force", "f", false, "Overwrite existing directory")
+	cmd.Flags().StringVar(&model, "model", "", "Default model for jobs (e.g., claude-3-5-sonnet-20241022, gpt-4)")
+	cmd.Flags().StringVar(&worktree, "worktree", "", "Default worktree for agent jobs in the plan")
+	cmd.Flags().StringVar(&targetAgentContainer, "target-agent-container", "", "Default container for agent jobs in the plan")
+
+	return cmd
 }
 
 // newPlanListCmd wraps `flow plan list`.
@@ -116,6 +146,7 @@ func newPlanAddCmd() *cobra.Command {
 		template    string
 		sourceFiles []string
 		dependsOn   []string
+		model       string
 	)
 
 	cmd := &cobra.Command{
@@ -147,6 +178,9 @@ func newPlanAddCmd() *cobra.Command {
 			for _, dep := range dependsOn {
 				flowArgs = append(flowArgs, "--depends-on", dep)
 			}
+			if model != "" {
+				flowArgs = append(flowArgs, "--model", model)
+			}
 
 			return runFlowCommand(flowArgs...)
 		},
@@ -159,6 +193,7 @@ func newPlanAddCmd() *cobra.Command {
 	cmd.Flags().StringVar(&template, "template", "", "Name of the job template to use")
 	cmd.Flags().StringSliceVar(&sourceFiles, "source-files", nil, "Comma-separated list of source files for reference-based prompts")
 	cmd.Flags().StringSliceVarP(&dependsOn, "depends-on", "d", nil, "Dependencies (job filenames)")
+	cmd.Flags().StringVar(&model, "model", "", "Model to use for the job")
 
 	return cmd
 }
