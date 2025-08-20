@@ -60,48 +60,69 @@ local function run_in_float_term(command)
   vim.cmd('startinsert')
 end
 
--- Helper to run a command in a true terminal (no Neovim hijacking)
-local function run_in_true_term(command)
-  -- Use a full window for better TUI rendering
-  vim.cmd('tabnew')
+-- Helper to run a command in a floating terminal
+local function run_in_float_term_tui(command)
+  local width = math.floor(vim.o.columns * 0.9)
+  local height = math.floor(vim.o.lines * 0.85)
+  local row = math.floor((vim.o.lines - height) / 2)
+  local col = math.floor((vim.o.columns - width) / 2)
+
+  -- Create a buffer
+  local buf = vim.api.nvim_create_buf(false, true)
   
-  -- Start the terminal with proper environment for TUI
+  -- Window options
+  local opts = {
+    relative = 'editor',
+    width = width,
+    height = height,
+    row = row,
+    col = col,
+    style = 'minimal',
+    border = 'rounded',
+    title = ' Grove Add Job ',
+    title_pos = 'center',
+  }
+  
+  -- Create the window
+  local win = vim.api.nvim_open_win(buf, true, opts)
+  
+  -- Configure window
+  vim.wo[win].winblend = 0
+  
+  -- Open terminal with proper environment for TUI
   local job_id = vim.fn.termopen(command, {
     env = {
       TERM = 'xterm-256color',
       COLORTERM = 'truecolor',
     },
     on_exit = function()
-      -- Close the tab when done
       vim.schedule(function()
-        vim.cmd('tabclose')
+        if vim.api.nvim_win_is_valid(win) then
+          vim.api.nvim_win_close(win, true)
+        end
+        if vim.api.nvim_buf_is_valid(buf) then
+          vim.api.nvim_buf_delete(buf, {force = true})
+        end
       end)
     end
   })
   
-  -- Enter terminal mode immediately for proper TUI interaction
+  -- Enter terminal mode
   vim.cmd('startinsert')
   
-  -- Disable UI elements that interfere with TUI
-  vim.opt_local.number = false
-  vim.opt_local.relativenumber = false
-  vim.opt_local.signcolumn = 'no'
-  vim.opt_local.foldcolumn = '0'
-  vim.opt_local.scrolloff = 0
-  vim.opt_local.sidescrolloff = 0
+  -- Set buffer-local options for clean rendering
+  vim.bo[buf].buflisted = false
+  vim.wo[win].number = false
+  vim.wo[win].relativenumber = false
+  vim.wo[win].signcolumn = 'no'
+  vim.wo[win].foldcolumn = '0'
+  vim.wo[win].scrolloff = 0
+  vim.wo[win].sidescrolloff = 0
   
-  -- Ensure the terminal gets full window size
-  vim.cmd('set laststatus=0')
-  vim.cmd('set showtabline=0')
-  
-  -- Restore on exit
-  vim.api.nvim_create_autocmd("TabClosed", {
-    callback = function()
-      vim.cmd('set laststatus=2')
-      vim.cmd('set showtabline=1')
-    end,
-    once = true
-  })
+  -- Set up keymaps for the floating window
+  vim.api.nvim_buf_set_keymap(buf, 't', '<Esc>', '<C-\\><C-n>:q<CR>', { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', ':q<CR>', { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ':q<CR>', { noremap = true, silent = true })
 end
 
 -- Initialize a new plan
@@ -826,7 +847,7 @@ function M.add_job_tui(plan_path)
     end
   end
   
-  run_in_true_term('flow plan add -i ' .. vim.fn.shellescape(plan_path))
+  run_in_float_term_tui('flow plan add -i ' .. vim.fn.shellescape(plan_path))
 end
 
 return M
