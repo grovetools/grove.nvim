@@ -14,6 +14,8 @@ func main() {
 	scenarios := []*harness.Scenario{
 		// Basic Scenarios
 		BasicScenario(),
+		// Neovim E2E Scenarios
+		NvimE2eScenario(),
 	}
 
 	// Execute the custom tend application with our scenarios
