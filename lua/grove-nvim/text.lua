@@ -142,8 +142,8 @@ function M.select_ask_and_run()
               vim.cmd('edit ' .. vim.fn.fnameescape(state.target_file))
               -- Jump to the bottom of the file
               vim.cmd('normal! G')
-              -- Run the chat command
-              vim.cmd('GroveChatRun')
+              -- Run the chat command in silent mode
+              require('grove-nvim').chat_run({ silent = true })
             else
               vim.notify("Grove: Failed to append question.", vim.log.levels.ERROR)
             end
