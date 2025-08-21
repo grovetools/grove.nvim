@@ -7,19 +7,14 @@ local state = {
 
 --- Set the target markdown file for text interactions.
 function M.set_target_file()
-  ui.input({
-    prompt = 'Target Markdown File: ',
-    default = state.target_file or vim.fn.expand('%:p'),
-    completion = 'file',
-    title = 'Set Chat Target File',
-  }, function(file_path)
-    if file_path and file_path ~= '' then
-      state.target_file = file_path
-      vim.notify('Grove: Target file set to ' .. state.target_file, vim.log.levels.INFO)
-    else
-      vim.notify('Grove: Target file selection cancelled.', vim.log.levels.WARN)
-    end
-  end)
+  local current_file = vim.fn.expand('%:p')
+  if current_file == '' then
+    vim.notify('Grove: No file in current buffer', vim.log.levels.ERROR)
+    return
+  end
+  
+  state.target_file = current_file
+  vim.notify('Grove: Target file set to ' .. vim.fn.fnamemodify(state.target_file, ':~:.'), vim.log.levels.INFO)
 end
 
 -- Helper to get visually selected text
