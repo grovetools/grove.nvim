@@ -14,7 +14,7 @@ function M.chat_run(opts)
   end
 
   -- Save the file before running
-  vim.cmd('write')
+  vim.cmd('silent write')
 
   -- Use grove bin directory
   local neogrove_path = vim.fn.expand('~/.grove/bin/neogrove')
@@ -31,27 +31,25 @@ function M.chat_run(opts)
     
     -- Show spinner in statusline
     vim.g.grove_chat_running = true
-    vim.cmd('redrawstatus')
+    vim.cmd('silent! redrawstatus')
     
     -- Run in background
     running_job = vim.fn.jobstart({neogrove_path, 'chat', buf_path}, {
       on_exit = function(_, exit_code)
         vim.g.grove_chat_running = false
-        vim.cmd('redrawstatus')
+        vim.cmd('silent! redrawstatus')
         if exit_code == 0 then
           -- Reload the buffer to show the updated content
-          vim.cmd('checktime')
-          vim.notify("Grove: Chat completed", vim.log.levels.INFO)
+          vim.cmd('silent! checktime')
+          -- Use echo instead of notify to avoid press ENTER prompt
+          vim.api.nvim_echo({{"Grove: Chat completed", "Normal"}}, false, {})
         else
-          vim.notify("Grove: Chat failed with exit code " .. exit_code, vim.log.levels.ERROR)
+          vim.api.nvim_echo({{"Grove: Chat failed with exit code " .. exit_code, "ErrorMsg"}}, false, {})
         end
         running_job = nil
       end,
       on_stderr = function(_, data)
-        -- Log errors but don't show them unless it's critical
-        if data and #data > 0 and data[1] ~= '' then
-          vim.notify("Grove: " .. table.concat(data, '\n'), vim.log.levels.WARN)
-        end
+        -- Silently ignore stderr unless debugging
       end,
     })
   else

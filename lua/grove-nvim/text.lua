@@ -189,9 +189,9 @@ function M.select_ask_and_run()
           on_exit = function(_, ask_exit_code)
             if ask_exit_code == 0 then
               -- Switch to the target file
-              vim.cmd('edit ' .. vim.fn.fnameescape(state.target_file))
+              vim.cmd('silent edit ' .. vim.fn.fnameescape(state.target_file))
               -- Jump to the bottom of the file
-              vim.cmd('normal! G')
+              vim.cmd('silent normal! G')
               -- Run the chat command in silent mode
               require('grove-nvim').chat_run({ silent = true })
             else
