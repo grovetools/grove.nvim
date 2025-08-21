@@ -2,6 +2,7 @@ local M = {}
 
 -- State for background job
 local running_job = nil
+local spinner_timer = nil
 
 --- Opens a floating terminal and runs the `neogrove chat` command for the current buffer.
 --- @param opts table|nil Options table with optional 'silent' boolean
@@ -33,10 +34,23 @@ function M.chat_run(opts)
     vim.g.grove_chat_running = true
     vim.cmd('silent! redrawstatus')
     
+    -- Start spinner animation timer
+    if spinner_timer then
+      vim.fn.timer_stop(spinner_timer)
+    end
+    spinner_timer = vim.fn.timer_start(100, function()
+      vim.cmd('silent! redrawstatus')
+    end, {['repeat'] = -1})
+    
     -- Run in background
     running_job = vim.fn.jobstart({neogrove_path, 'chat', buf_path}, {
       on_exit = function(_, exit_code)
         vim.g.grove_chat_running = false
+        -- Stop the spinner timer
+        if spinner_timer then
+          vim.fn.timer_stop(spinner_timer)
+          spinner_timer = nil
+        end
         vim.cmd('silent! redrawstatus')
         if exit_code == 0 then
           -- Reload the buffer to show the updated content
