@@ -54,8 +54,33 @@ vim.api.nvim_create_user_command(
   }
 )
 
+-- Text Commands
+vim.api.nvim_create_user_command(
+  'GroveSetTarget',
+  function()
+    require('grove-nvim.text').set_target_file()
+  end,
+  {
+    nargs = 0,
+    desc = 'Set the target markdown file for text interactions.'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GroveText',
+  function()
+    require('grove-nvim.text').select_and_ask()
+  end,
+  {
+    nargs = 0,
+    range = true, -- Important for visual selection
+    desc = 'Capture selected text and ask a question about it.'
+  }
+)
+
 -- Keybindings
 vim.keymap.set('n', '<leader>fp', '<cmd>GrovePlan<CR>', { desc = 'Grove Plans' })
 vim.keymap.set('n', '<leader>fc', '<cmd>GroveChatRun<CR>', { desc = 'Grove Chat Run' })
 vim.keymap.set('n', '<leader>jn', '<cmd>GroveAddJob<CR>', { desc = 'Grove Add Job (New)' })
 vim.keymap.set('n', '<leader>ji', '<cmd>GroveAddJobTUI<CR>', { desc = 'Grove Add Job (TUI)' })
+vim.keymap.set('v', '<leader>fq', '<cmd>GroveText<CR>', { desc = 'Grove Ask Question (Flow)' })

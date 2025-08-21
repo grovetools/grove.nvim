@@ -16,6 +16,8 @@ func main() {
 		BasicScenario(),
 		// Neovim E2E Scenarios
 		NvimE2eScenario(),
+		// Text Interaction Scenarios
+		TextInteractionScenario(),
 	}
 
 	// Execute the custom tend application with our scenarios
