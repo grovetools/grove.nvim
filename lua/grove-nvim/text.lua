@@ -101,4 +101,66 @@ function M.select_and_ask()
   vim.fn.chanclose(job_id, 'stdin')
 end
 
+--- Capture visual selection, append to target file, ask a question, then switch to target and run chat.
+function M.select_ask_and_run()
+  if not state.target_file then
+    vim.notify("Grove: No target file set. Use :GroveSetTarget to set one.", vim.log.levels.ERROR)
+    return
+  end
+
+  local selection = get_visual_selection()
+  if selection == '' then
+    vim.notify("Grove: No text selected.", vim.log.levels.WARN)
+    return
+  end
+
+  local lang = vim.bo.filetype
+  local neogrove_path = vim.fn.exepath('neogrove')
+  if neogrove_path == '' then
+    vim.notify("Grove: neogrove executable not found in PATH.", vim.log.levels.ERROR)
+    return
+  end
+
+  -- 1. Append the code snippet
+  local select_cmd = { neogrove_path, 'text', 'select', '--file', state.target_file, '--lang', lang }
+  
+  local job_id = vim.fn.jobstart(select_cmd, {
+    on_exit = function(_, exit_code)
+      if exit_code ~= 0 then
+        vim.notify("Grove: Failed to append selection.", vim.log.levels.ERROR)
+        return
+      end
+
+      -- 2. Prompt for a question
+      ui.input({ prompt = 'Your Question: ', title = 'Ask About Selection' }, function(question)
+        if not question or question == '' then
+          vim.notify("Grove: Question cancelled.", vim.log.levels.WARN)
+          return
+        end
+
+        -- 3. Append the question
+        local ask_cmd = { neogrove_path, 'text', 'ask', '--file', state.target_file }
+        local ask_job_id = vim.fn.jobstart(ask_cmd, {
+          on_exit = function(_, ask_exit_code)
+            if ask_exit_code == 0 then
+              -- Switch to the target file
+              vim.cmd('edit ' .. vim.fn.fnameescape(state.target_file))
+              -- Run the chat command
+              vim.cmd('GroveChatRun')
+            else
+              vim.notify("Grove: Failed to append question.", vim.log.levels.ERROR)
+            end
+          end,
+        })
+        vim.fn.jobsend(ask_job_id, question)
+        vim.fn.chanclose(ask_job_id, 'stdin')
+      end)
+    end,
+  })
+
+  -- Send the selected text to the command's stdin
+  vim.fn.jobsend(job_id, selection)
+  vim.fn.chanclose(job_id, 'stdin')
+end
+
 return M
