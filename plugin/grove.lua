@@ -71,6 +71,17 @@ vim.api.nvim_create_user_command(
 )
 
 vim.api.nvim_create_user_command(
+  'GroveShowTarget',
+  function()
+    require('grove-nvim.text').show_target_file()
+  end,
+  {
+    nargs = 0,
+    desc = 'Show the current target markdown file.'
+  }
+)
+
+vim.api.nvim_create_user_command(
   'GroveText',
   function()
     require('grove-nvim.text').select_and_ask()

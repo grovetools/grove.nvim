@@ -5,6 +5,41 @@ local state = {
   target_file = nil,
 }
 
+-- State file path
+local state_file = vim.fn.expand('~/.grove/state.yml')
+
+-- Load state from file
+local function load_state()
+  if vim.fn.filereadable(state_file) == 1 then
+    local content = vim.fn.readfile(state_file)
+    for _, line in ipairs(content) do
+      local key, value = line:match("^(%w+):%s*(.+)$")
+      if key == "target_file" and value then
+        state.target_file = value
+      end
+    end
+  end
+end
+
+-- Save state to file
+local function save_state()
+  -- Ensure .grove directory exists
+  local grove_dir = vim.fn.expand('~/.grove')
+  if vim.fn.isdirectory(grove_dir) == 0 then
+    vim.fn.mkdir(grove_dir, 'p')
+  end
+  
+  -- Write state file
+  local lines = {}
+  if state.target_file then
+    table.insert(lines, "target_file: " .. state.target_file)
+  end
+  vim.fn.writefile(lines, state_file)
+end
+
+-- Load state on module load
+load_state()
+
 --- Set the target markdown file for text interactions.
 function M.set_target_file()
   local current_file = vim.fn.expand('%:p')
@@ -14,7 +49,22 @@ function M.set_target_file()
   end
   
   state.target_file = current_file
+  save_state()
   vim.notify('Grove: Target file set to ' .. vim.fn.fnamemodify(state.target_file, ':~:.'), vim.log.levels.INFO)
+end
+
+--- Get the current target file
+function M.get_target_file()
+  return state.target_file
+end
+
+--- Show the current target file
+function M.show_target_file()
+  if state.target_file then
+    vim.notify('Grove: Target file is ' .. vim.fn.fnamemodify(state.target_file, ':~:.'), vim.log.levels.INFO)
+  else
+    vim.notify('Grove: No target file set. Use :GroveSetTarget to set one.', vim.log.levels.WARN)
+  end
 end
 
 -- Helper to get visually selected text
