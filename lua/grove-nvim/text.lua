@@ -140,6 +140,8 @@ function M.select_ask_and_run()
             if ask_exit_code == 0 then
               -- Switch to the target file
               vim.cmd('edit ' .. vim.fn.fnameescape(state.target_file))
+              -- Jump to the bottom of the file
+              vim.cmd('normal! G')
               -- Run the chat command
               vim.cmd('GroveChatRun')
             else
