@@ -12,8 +12,14 @@ grove install neogrove
 
 ### Commands
 
-- `:GroveChatRun` - Run Grove chat on the current markdown file
-- `:GroveChatRun silent` - Run chat in background with statusline spinner
+- `:GroveChatRun [args...]` - Run Grove chat on the current markdown file
+  - By default, opens in a vertical split terminal
+  - Arguments can be combined, e.g., `:GroveChatRun silent`
+  - Possible arguments:
+    - `silent`: Run chat in background with statusline spinner
+    - `vertical`: Open in a vertical split (default)
+    - `horizontal`: Open in a horizontal split
+    - `fullscreen`: Open in a new tab
 - `:GroveSetTarget` - Set current file as target for text interactions
 - `:GroveShowTarget` - Show the current target file
 - `:GroveText` - (Visual mode) Capture selection and ask a question

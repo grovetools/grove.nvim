@@ -5,9 +5,26 @@ local running_job = nil
 local spinner_timer = nil
 
 --- Opens a floating terminal and runs the `neogrove chat` command for the current buffer.
---- @param opts table|nil Options table with optional 'silent' boolean
-function M.chat_run(opts)
-  opts = opts or {}
+--- @param args table|nil The arguments object from `nvim_create_user_command`.
+--- args.args can contain "silent", "vertical", "horizontal", "fullscreen".
+function M.chat_run(args)
+  args = args or {}
+  local opts = {
+    silent = false,
+    layout = 'vertical', -- New default layout
+  }
+
+  -- Parse string arguments into the opts table
+  if args.args and args.args ~= '' then
+    for arg in string.gmatch(args.args, "%S+") do
+      if arg == 'silent' then
+        opts.silent = true
+      elseif arg == 'vertical' or arg == 'horizontal' or arg == 'fullscreen' then
+        opts.layout = arg
+      end
+    end
+  end
+
   local buf_path = vim.api.nvim_buf_get_name(0)
   if buf_path == '' or buf_path == nil then
     vim.notify("Grove: No file name for the current buffer.", vim.log.levels.ERROR)
@@ -67,8 +84,14 @@ function M.chat_run(opts)
       end,
     })
   else
-    -- Original behavior - open in terminal split
-    vim.cmd('new')
+    -- Open chat in a terminal with specified layout
+    if opts.layout == 'fullscreen' then
+      vim.cmd('tabnew')
+    elseif opts.layout == 'horizontal' then
+      vim.cmd('new')
+    else -- 'vertical' is the default
+      vim.cmd('vnew')
+    end
     vim.cmd('terminal ' .. neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path))
     vim.cmd('startinsert')
   end

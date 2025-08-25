@@ -1,15 +1,11 @@
 vim.api.nvim_create_user_command(
   'GroveChatRun',
   function(args)
-    local opts = {}
-    if args.args == 'silent' then
-      opts.silent = true
-    end
-    require('grove-nvim').chat_run(opts)
+    require('grove-nvim').chat_run(args)
   end,
   {
-    nargs = '?',
-    desc = "Run 'flow chat run' on the current note. Use 'silent' to run in background."
+    nargs = '*',
+    desc = "Run Grove chat on the current note. Args: [silent] [vertical|horizontal|fullscreen]"
   }
 )
 
