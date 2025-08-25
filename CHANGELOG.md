@@ -1,3 +1,43 @@
+## v0.0.3 (2025-08-25)
+
+### Features
+
+* add layout options to GroveChatRun command
+* persist target file state across sessions
+* add silent mode for GroveChatRun with statusline spinner
+* make GroveTextRun jump to bottom of target file
+* add GroveTextRun command for streamlined workflow
+* add inline chat text selection feature
+* add tend tests for neovim
+* add floating terminal TUI for job creation
+* add plan configuration support and improve UX
+
+### Code Refactoring
+
+* simplify GroveSetTarget to use current buffer
+
+### Tests
+
+* add simplified text interaction E2E test
+
+### Bug Fixes
+
+* don't run e2e in ci
+* disable lfs and go linting
+* eliminate "Press ENTER" prompts in silent mode
+
+### Documentation
+
+* add statusline integration to README and improve spinner
+
+### Continuous Integration
+
+* add Git LFS disable to release workflow
+
+### Chores
+
+* bump dependencies
+
 ## v0.0.2 (2025-08-15)
 
 ### Features
