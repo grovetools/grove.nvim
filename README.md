@@ -1,6 +1,6 @@
 # grove-nvim
 
-<img src="https://github.com/user-attachments/assets/f489fc83-c2ed-4c07-9659-a2231c837240" width="70%" /> 
+<img src="https://github.com/user-attachments/assets/741e5cd5-687f-4e53-9bc9-fb28872aab0c" width="70%" />
 
 ## Installation
 
