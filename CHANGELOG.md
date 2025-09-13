@@ -1,3 +1,9 @@
+## v0.0.4 (2025-09-13)
+
+### Chores
+
+* update Grove dependencies to latest versions
+
 ## v0.0.3 (2025-08-25)
 
 ### Features
