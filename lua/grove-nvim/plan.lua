@@ -900,34 +900,41 @@ function M.extract_from_buffer()
       return 
     end
 
-    ui.input({ prompt = 'Create with worktree? (y/N): ', default = 'n' }, function(use_worktree)
-      if use_worktree == nil then 
-        vim.notify('Grove: Plan creation cancelled.', vim.log.levels.WARN)
-        return 
-      end
-
-      local neogrove_path = vim.fn.exepath('neogrove')
-      if neogrove_path == '' then
-        vim.notify("Grove: neogrove not found in PATH", vim.log.levels.ERROR)
-        return
-      end
-
-      local cmd_args = {
-        neogrove_path, 'plan', 'init', name,
-        '--extract-all-from', buf_path,
-      }
-
-      if use_worktree:lower() == 'y' or use_worktree:lower() == 'yes' then
-        table.insert(cmd_args, '--with-worktree')
-      end
-      
-      run_command(cmd_args, function(stdout, stderr, exit_code)
-        if exit_code == 0 then
-          vim.notify('Grove: Plan "' .. name .. '" created successfully.', vim.log.levels.INFO)
-          vim.schedule(function() M.status(name) end)
-        else
-          vim.notify('Grove: Failed to create plan: ' .. stderr, vim.log.levels.ERROR)
+    -- Store the plan name and buffer path for use in nested callback
+    local plan_name = name
+    local extract_from = buf_path
+    
+    -- Schedule the worktree prompt to avoid callback issues
+    vim.schedule(function()
+      ui.input({ prompt = 'Create with worktree? (y/N): ', default = 'n' }, function(use_worktree)
+        if use_worktree == nil then 
+          vim.notify('Grove: Plan creation cancelled.', vim.log.levels.WARN)
+          return 
         end
+
+        local neogrove_path = vim.fn.exepath('neogrove')
+        if neogrove_path == '' then
+          vim.notify("Grove: neogrove not found in PATH", vim.log.levels.ERROR)
+          return
+        end
+
+        local cmd_args = {
+          neogrove_path, 'plan', 'init', plan_name,
+          '--extract-all-from', extract_from,
+        }
+
+        if use_worktree:lower() == 'y' or use_worktree:lower() == 'yes' then
+          table.insert(cmd_args, '--with-worktree')
+        end
+        
+        run_command(cmd_args, function(stdout, stderr, exit_code)
+          if exit_code == 0 then
+            vim.notify('Grove: Plan "' .. plan_name .. '" created successfully.', vim.log.levels.INFO)
+            vim.schedule(function() M.status(plan_name) end)
+          else
+            vim.notify('Grove: Failed to create plan: ' .. stderr, vim.log.levels.ERROR)
+          end
+        end)
       end)
     end)
   end)
