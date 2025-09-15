@@ -930,7 +930,25 @@ function M.extract_from_buffer()
         run_command(cmd_args, function(stdout, stderr, exit_code)
           if exit_code == 0 then
             vim.notify('Grove: Plan "' .. plan_name .. '" created successfully.', vim.log.levels.INFO)
-            vim.schedule(function() M.status(plan_name) end)
+            -- Ask if user wants to open the plan
+            vim.schedule(function()
+              ui.input({ prompt = 'Open plan in tmux session? (y/N): ', default = 'n' }, function(open_plan)
+                if open_plan and (open_plan:lower() == 'y' or open_plan:lower() == 'yes') then
+                  -- Run flow plan open command
+                  local open_cmd = { 'flow', 'plan', 'open', plan_name }
+                  run_command(open_cmd, function(open_stdout, open_stderr, open_exit_code)
+                    if open_exit_code == 0 then
+                      vim.notify('Grove: Opened plan "' .. plan_name .. '" in tmux session.', vim.log.levels.INFO)
+                    else
+                      vim.notify('Grove: Failed to open plan: ' .. open_stderr, vim.log.levels.ERROR)
+                    end
+                  end)
+                else
+                  -- Show status if not opening
+                  M.status(plan_name)
+                end
+              end)
+            end)
           else
             vim.notify('Grove: Failed to create plan: ' .. stderr, vim.log.levels.ERROR)
           end
