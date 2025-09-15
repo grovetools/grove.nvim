@@ -923,33 +923,47 @@ function M.extract_from_buffer()
           '--extract-all-from', extract_from,
         }
 
-        -- Treat empty response as 'no'
-        if use_worktree ~= '' and (use_worktree:lower() == 'y' or use_worktree:lower() == 'yes') then
+        -- Track if worktree is being created
+        -- Handle the response more carefully
+        local has_worktree = false
+        local response = use_worktree:lower():match("^%s*(.-)%s*$") -- trim whitespace
+        if response == 'y' or response == 'yes' then
           table.insert(cmd_args, '--with-worktree')
+          has_worktree = true
+          vim.notify('Grove: Creating plan with worktree...', vim.log.levels.INFO)
+        else
+          vim.notify('Grove: Creating plan without worktree...', vim.log.levels.INFO)
         end
         
         run_command(cmd_args, function(stdout, stderr, exit_code)
           if exit_code == 0 then
             vim.notify('Grove: Plan "' .. plan_name .. '" created successfully.', vim.log.levels.INFO)
-            -- Ask if user wants to open the plan
-            vim.schedule(function()
-              ui.input({ prompt = 'Open plan in tmux session? (y/N): ' }, function(open_plan)
-                if open_plan and open_plan ~= '' and (open_plan:lower() == 'y' or open_plan:lower() == 'yes') then
-                  -- Run flow plan open command
-                  local open_cmd = { 'flow', 'plan', 'open', plan_name }
-                  run_command(open_cmd, function(open_stdout, open_stderr, open_exit_code)
-                    if open_exit_code == 0 then
-                      vim.notify('Grove: Opened plan "' .. plan_name .. '" in tmux session.', vim.log.levels.INFO)
-                    else
-                      vim.notify('Grove: Failed to open plan: ' .. open_stderr, vim.log.levels.ERROR)
-                    end
-                  end)
-                else
-                  -- Show status if not opening
-                  M.status(plan_name)
-                end
+            -- Only ask about opening if worktree was created
+            if has_worktree then
+              vim.schedule(function()
+                ui.input({ prompt = 'Open plan in tmux session? (y/N): ' }, function(open_plan)
+                  if open_plan and open_plan ~= '' and (open_plan:lower() == 'y' or open_plan:lower() == 'yes') then
+                    -- Run flow plan open command
+                    local open_cmd = { 'flow', 'plan', 'open', plan_name }
+                    run_command(open_cmd, function(open_stdout, open_stderr, open_exit_code)
+                      if open_exit_code == 0 then
+                        vim.notify('Grove: Opened plan "' .. plan_name .. '" in tmux session.', vim.log.levels.INFO)
+                      else
+                        -- If opening fails, show status instead
+                        vim.notify('Grove: Could not open tmux session. Showing status instead.', vim.log.levels.WARN)
+                        M.status(plan_name)
+                      end
+                    end)
+                  else
+                    -- Show status if not opening
+                    M.status(plan_name)
+                  end
+                end)
               end)
-            end)
+            else
+              -- No worktree, just show status
+              vim.schedule(function() M.status(plan_name) end)
+            end
           else
             vim.notify('Grove: Failed to create plan: ' .. stderr, vim.log.levels.ERROR)
           end
