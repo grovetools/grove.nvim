@@ -33,6 +33,17 @@ vim.api.nvim_create_user_command(
 )
 
 vim.api.nvim_create_user_command(
+  'GrovePlanExtract',
+  function()
+    require('grove-nvim.plan').extract_from_buffer()
+  end,
+  {
+    nargs = 0,
+    desc = 'Initialize a Grove Plan, extracting content from the current buffer.'
+  }
+)
+
+vim.api.nvim_create_user_command(
   'GroveAddJob',
   function()
     require('grove-nvim.plan').add_job_to_active_plan()
@@ -103,6 +114,7 @@ vim.api.nvim_create_user_command(
 
 -- Keybindings
 vim.keymap.set('n', '<leader>fp', '<cmd>GrovePlan<CR>', { desc = 'Grove Plans' })
+vim.keymap.set('n', '<leader>fpx', '<cmd>GrovePlanExtract<CR>', { desc = 'Grove Plan (Extract from buffer)' })
 vim.keymap.set('n', '<leader>fc', '<cmd>GroveChatRun<CR>', { desc = 'Grove Chat Run' })
 vim.keymap.set('n', '<leader>jn', '<cmd>GroveAddJob<CR>', { desc = 'Grove Add Job (New)' })
 vim.keymap.set('n', '<leader>ji', '<cmd>GroveAddJobTUI<CR>', { desc = 'Grove Add Job (TUI)' })

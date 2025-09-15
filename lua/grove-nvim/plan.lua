@@ -837,6 +837,11 @@ function M.add_job_to_active_plan()
   M.add_job_form(active_plan)
 end
 
+-- Add job wizard - interactive job creation with form
+function M.add_job_wizard(plan_path)
+  M.add_job_form(plan_path)
+end
+
 -- Add job to plan using TUI
 function M.add_job_tui(plan_path)
   if not plan_path then
@@ -848,6 +853,53 @@ function M.add_job_tui(plan_path)
   end
   
   run_in_float_term_tui('flow plan add -i ' .. vim.fn.shellescape(plan_path))
+end
+
+-- Extract content from current buffer and create a new plan
+function M.extract_from_buffer()
+  local buf_path = vim.api.nvim_buf_get_name(0)
+  if buf_path == '' or buf_path == nil then
+    vim.notify("Grove: No file name for the current buffer.", vim.log.levels.ERROR)
+    return
+  end
+
+  ui.input({ prompt = 'New Plan Name (from buffer): ' }, function(name)
+    if not name or name == '' then 
+      vim.notify('Grove: Plan creation cancelled.', vim.log.levels.WARN)
+      return 
+    end
+
+    ui.input({ prompt = 'Create with worktree? (y/N): ', default = 'n' }, function(use_worktree)
+      if use_worktree == nil then 
+        vim.notify('Grove: Plan creation cancelled.', vim.log.levels.WARN)
+        return 
+      end
+
+      local neogrove_path = vim.fn.exepath('neogrove')
+      if neogrove_path == '' then
+        vim.notify("Grove: neogrove not found in PATH", vim.log.levels.ERROR)
+        return
+      end
+
+      local cmd_args = {
+        neogrove_path, 'plan', 'init', name,
+        '--extract-all-from', buf_path,
+      }
+
+      if use_worktree:lower() == 'y' or use_worktree:lower() == 'yes' then
+        table.insert(cmd_args, '--with-worktree')
+      end
+      
+      run_command(cmd_args, function(stdout, stderr, exit_code)
+        if exit_code == 0 then
+          vim.notify('Grove: Plan "' .. name .. '" created successfully.', vim.log.levels.INFO)
+          vim.schedule(function() M.status(name) end)
+        else
+          vim.notify('Grove: Failed to create plan: ' .. stderr, vim.log.levels.ERROR)
+        end
+      end)
+    end)
+  end)
 end
 
 return M

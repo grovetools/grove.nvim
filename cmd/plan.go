@@ -52,6 +52,10 @@ func newPlanInitCmd() *cobra.Command {
 		model                string
 		worktree             string
 		targetAgentContainer string
+		extractAllFrom       string
+		withWorktree         bool
+		openSession          bool
+		recipe               string
 	)
 
 	cmd := &cobra.Command{
@@ -73,6 +77,18 @@ func newPlanInitCmd() *cobra.Command {
 			if targetAgentContainer != "" {
 				flowArgs = append(flowArgs, "--target-agent-container", targetAgentContainer)
 			}
+			if extractAllFrom != "" {
+				flowArgs = append(flowArgs, "--extract-all-from", extractAllFrom)
+			}
+			if withWorktree {
+				flowArgs = append(flowArgs, "--with-worktree")
+			}
+			if openSession {
+				flowArgs = append(flowArgs, "--open-session")
+			}
+			if recipe != "" {
+				flowArgs = append(flowArgs, "--recipe", recipe)
+			}
 
 			return runFlowCommand(flowArgs...)
 		},
@@ -82,6 +98,10 @@ func newPlanInitCmd() *cobra.Command {
 	cmd.Flags().StringVar(&model, "model", "", "Default model for jobs (e.g., claude-3-5-sonnet-20241022, gpt-4)")
 	cmd.Flags().StringVar(&worktree, "worktree", "", "Default worktree for agent jobs in the plan")
 	cmd.Flags().StringVar(&targetAgentContainer, "target-agent-container", "", "Default container for agent jobs in the plan")
+	cmd.Flags().StringVar(&extractAllFrom, "extract-all-from", "", "Path to a markdown file to extract all content from into an initial job")
+	cmd.Flags().BoolVar(&withWorktree, "with-worktree", false, "Automatically set the worktree name to match the plan directory name")
+	cmd.Flags().BoolVar(&openSession, "open-session", false, "Immediately open a tmux session for the plan's worktree")
+	cmd.Flags().StringVar(&recipe, "recipe", "", "Name of a plan recipe to initialize from")
 
 	return cmd
 }
