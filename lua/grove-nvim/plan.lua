@@ -926,12 +926,17 @@ function M.extract_from_buffer()
         -- Track if worktree is being created
         -- Handle the response more carefully
         local has_worktree = false
-        local response = use_worktree:lower():match("^%s*(.-)%s*$") -- trim whitespace
-        if response == 'y' or response == 'yes' then
-          table.insert(cmd_args, '--with-worktree')
-          has_worktree = true
-          vim.notify('Grove: Creating plan with worktree...', vim.log.levels.INFO)
+        if use_worktree and use_worktree ~= '' then
+          local response = use_worktree:lower():match("^%s*(.-)%s*$") or use_worktree:lower()
+          if response == 'y' or response == 'yes' then
+            table.insert(cmd_args, '--with-worktree')
+            has_worktree = true
+            vim.notify('Grove: Creating plan with worktree...', vim.log.levels.INFO)
+          else
+            vim.notify('Grove: Creating plan without worktree...', vim.log.levels.INFO)
+          end
         else
+          -- Empty response means no worktree
           vim.notify('Grove: Creating plan without worktree...', vim.log.levels.INFO)
         end
         
