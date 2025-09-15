@@ -863,7 +863,12 @@ function M.extract_from_buffer()
     return
   end
 
-  ui.input({ prompt = 'New Plan Name (from buffer): ' }, function(name)
+  -- Extract filename without extension as default plan name
+  local default_name = vim.fn.fnamemodify(buf_path, ':t:r')
+  -- Convert underscores to hyphens and make lowercase for consistency
+  default_name = default_name:gsub('_', '-'):lower()
+
+  ui.input({ prompt = 'New Plan Name (from buffer): ', default = default_name }, function(name)
     if not name or name == '' then 
       vim.notify('Grove: Plan creation cancelled.', vim.log.levels.WARN)
       return 
