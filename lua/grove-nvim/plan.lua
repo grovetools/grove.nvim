@@ -906,7 +906,7 @@ function M.extract_from_buffer()
     
     -- Schedule the worktree prompt to avoid callback issues
     vim.schedule(function()
-      ui.input({ prompt = 'Create with worktree? (y/N): ', default = 'n' }, function(use_worktree)
+      ui.input({ prompt = 'Create with worktree? (y/N): ' }, function(use_worktree)
         if use_worktree == nil then 
           vim.notify('Grove: Plan creation cancelled.', vim.log.levels.WARN)
           return 
@@ -923,7 +923,8 @@ function M.extract_from_buffer()
           '--extract-all-from', extract_from,
         }
 
-        if use_worktree:lower() == 'y' or use_worktree:lower() == 'yes' then
+        -- Treat empty response as 'no'
+        if use_worktree ~= '' and (use_worktree:lower() == 'y' or use_worktree:lower() == 'yes') then
           table.insert(cmd_args, '--with-worktree')
         end
         
@@ -932,8 +933,8 @@ function M.extract_from_buffer()
             vim.notify('Grove: Plan "' .. plan_name .. '" created successfully.', vim.log.levels.INFO)
             -- Ask if user wants to open the plan
             vim.schedule(function()
-              ui.input({ prompt = 'Open plan in tmux session? (y/N): ', default = 'n' }, function(open_plan)
-                if open_plan and (open_plan:lower() == 'y' or open_plan:lower() == 'yes') then
+              ui.input({ prompt = 'Open plan in tmux session? (y/N): ' }, function(open_plan)
+                if open_plan and open_plan ~= '' and (open_plan:lower() == 'y' or open_plan:lower() == 'yes') then
                   -- Run flow plan open command
                   local open_cmd = { 'flow', 'plan', 'open', plan_name }
                   run_command(open_cmd, function(open_stdout, open_stderr, open_exit_code)
