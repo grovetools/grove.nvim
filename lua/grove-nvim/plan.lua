@@ -863,10 +863,36 @@ function M.extract_from_buffer()
     return
   end
 
-  -- Extract filename without extension as default plan name
-  local default_name = vim.fn.fnamemodify(buf_path, ':t:r')
-  -- Convert underscores to hyphens and make lowercase for consistency
-  default_name = default_name:gsub('_', '-'):lower()
+  -- Try to extract title from frontmatter
+  local default_name = ""
+  local lines = vim.api.nvim_buf_get_lines(0, 0, 20, false) -- Check first 20 lines for frontmatter
+  local in_frontmatter = false
+  local frontmatter_start = false
+  
+  for i, line in ipairs(lines) do
+    if i == 1 and line:match("^---") then
+      in_frontmatter = true
+      frontmatter_start = true
+    elseif in_frontmatter and line:match("^---") and frontmatter_start then
+      break -- End of frontmatter
+    elseif in_frontmatter then
+      local title = line:match("^title:%s*(.+)$")
+      if title then
+        -- Clean up the title: remove quotes, convert spaces to hyphens, lowercase
+        default_name = title:gsub('^"', ''):gsub('"$', ''):gsub("^'", ""):gsub("'$", "")
+        default_name = default_name:gsub('%s+', '-'):gsub('_', '-'):lower()
+        -- Remove any non-alphanumeric characters except hyphens
+        default_name = default_name:gsub('[^%w%-]', '')
+        break
+      end
+    end
+  end
+  
+  -- Fallback to filename if no title found
+  if default_name == "" then
+    default_name = vim.fn.fnamemodify(buf_path, ':t:r')
+    default_name = default_name:gsub('_', '-'):lower()
+  end
 
   ui.input({ prompt = 'New Plan Name (from buffer): ', default = default_name }, function(name)
     if not name or name == '' then 
