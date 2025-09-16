@@ -73,15 +73,16 @@ func newPlanInitCmd() *cobra.Command {
 			}
 			if worktree != "" {
 				flowArgs = append(flowArgs, "--worktree", worktree)
+			} else if withWorktree {
+				// When with-worktree is set but no explicit worktree value,
+				// pass --worktree without a value to use auto naming
+				flowArgs = append(flowArgs, "--worktree")
 			}
 			if targetAgentContainer != "" {
 				flowArgs = append(flowArgs, "--target-agent-container", targetAgentContainer)
 			}
 			if extractAllFrom != "" {
 				flowArgs = append(flowArgs, "--extract-all-from", extractAllFrom)
-			}
-			if withWorktree {
-				flowArgs = append(flowArgs, "--with-worktree")
 			}
 			if openSession {
 				flowArgs = append(flowArgs, "--open-session")

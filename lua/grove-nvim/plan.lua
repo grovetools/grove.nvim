@@ -929,9 +929,10 @@ function M.extract_from_buffer()
         if use_worktree and use_worktree ~= '' then
           local response = use_worktree:lower():match("^%s*(.-)%s*$") or use_worktree:lower()
           if response == 'y' or response == 'yes' then
-            table.insert(cmd_args, '--with-worktree')
+            -- Use --worktree flag (without value uses plan name automatically)
+            table.insert(cmd_args, '--worktree')
             has_worktree = true
-            vim.notify('Grove: Creating plan with worktree...', vim.log.levels.INFO)
+            vim.notify('Grove: Creating plan with worktree (using plan name)...', vim.log.levels.INFO)
           else
             vim.notify('Grove: Creating plan without worktree...', vim.log.levels.INFO)
           end
