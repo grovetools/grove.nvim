@@ -1,3 +1,27 @@
+## v0.0.4 (2025-09-17)
+
+### Features
+
+* add option to open plan in tmux session after creation
+* extract plan name from markdown frontmatter title
+* use buffer filename as default plan name
+* add plan extraction from current buffer
+
+### Bug Fixes
+
+* improve worktree flag handling and tmux session logic
+* remove default values from yes/no prompts to avoid display issue
+* resolve dialog flow issue in extract_from_buffer
+
+### Documentation
+
+* **changelog:** update CHANGELOG.md for v0.0.4
+
+### Chores
+
+* bump dependencies
+* update Grove dependencies to latest versions
+
 ## v0.0.4 (2025-09-13)
 
 ### Chores
