@@ -1,46 +1,27 @@
-This guide explains how to install the `grove-nvim` plugin and its dependencies.
+# Installation
 
-## Prerequisites
+The recommended way to install `grove-nvim` is by using the `grove` meta-CLI, which manages all tools within the Grove ecosystem.
 
-Before installing `grove-nvim`, ensure the following components are installed and configured correctly.
+### Prerequisites
 
-### 1. `neogrove` Binary
+You must have the `grove` meta-CLI installed. If you don't, please follow the **[Grove Ecosystem Installation Guide](https://github.com/mattsolo1/grove-meta/blob/main/docs/02-installation.md)** first. This guide also covers essential setup like configuring your `PATH`.
 
-`grove-nvim` requires its companion binary, `neogrove`, to function. This binary is managed by the `grove` meta-tool. You can install it by running:
+### Install Command
+
+Once the `grove` CLI is set up, you can install `grove-nvim` with a single command:
 
 ```bash
 grove install grove-nvim
 ```
 
-This command installs the `neogrove` binary into the Grove ecosystem, making it available to the Neovim plugin.
+### Verifying the Installation
 
-### 2. `grove-flow` Binary
-
-The `neogrove` binary is a specialized wrapper that calls the `grove-flow` tool for most of its operations. Therefore, the `flow` binary must be installed and available in your system's `PATH`.
-
-You can install it using the `grove` meta-tool:
+To confirm that the tool was installed correctly, you can run its `version` command:
 
 ```bash
-grove install grove-flow
+grove-nvim version
 ```
 
-### 3. `snacks.nvim` UI Plugin
+### Building from Source
 
-The plugin uses `snacks.nvim` to create user interfaces for features like the Plan picker and job creation forms. This Neovim plugin must be installed alongside `grove-nvim`.
-
-## Installation
-
-You can install `grove-nvim` using your preferred Neovim plugin manager. The following is an example using `lazy.nvim`.
-
-Add the following plugin specification to your `lazy.nvim` configuration. Make sure to include the `snacks.nvim` dependency.
-
-```lua
-{
-  "mattsolo1/grove-nvim",
-  dependencies = { "mrjones2014/snacks.nvim" },
-  config = function()
-    -- The plugin sets up commands and default keybindings automatically.
-    -- No additional setup is required.
-  end,
-}
-```
+For contributors, the recommended way to work with the source code is to clone the entire Grove ecosystem monorepo. Please refer to the **[Building from Source](https://github.com/mattsolo1/grove-meta/blob/main/docs/02-installation.md#3-building-from-source-for-contributors)** section in the main installation guide for details.
