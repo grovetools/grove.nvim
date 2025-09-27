@@ -11,11 +11,11 @@ settings:
   structured_output_file: pkg/docs/docs.json
   system_prompt: default
 sections:
-  - name: introduction
+  - name: overview
     order: 1
-    output: 01-introduction.md
-    prompt: prompts/01-introduction.md
-    title: Introduction
+    output: 01-overview.md
+    prompt: prompts/01-overview.md
+    title: Overview
   - name: installation
     order: 2
     output: 02-installation.md
