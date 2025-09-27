@@ -1,0 +1,11 @@
+`grove-nvim` is a Neovim plugin that integrates the Grove AI development ecosystem directly into the editor. It acts as a bridge to `grove-flow`, a tool for creating and managing complex, multi-step AI workflows. The primary goal of `grove-nvim` is to reduce context switching by bringing these development tools into the environment where code is written.
+
+The plugin is designed for developers who use Neovim and want to incorporate sophisticated AI-driven tasks into their daily workflow without leaving their editor.
+
+Key features include:
+
+*   **In-Editor AI Chat**: Run AI chat sessions on the contents of the current buffer. The chat can be opened in various terminal layouts (vertical, horizontal, fullscreen) for interactive sessions or run silently in the background with a statusline indicator for non-blocking workflows.
+
+*   **Plan Management**: Interact with Grove "Plans," which are structured directories containing a series of dependent AI jobs. The plugin provides a user interface to list, view the status of, and add new jobs to these plans, facilitating the orchestration of complex tasks directly from Neovim.
+
+*   **Code-to-Chat Workflows**: A streamlined process for using code as context for AI queries. Users can visually select a block of code, append it to a designated "target" markdown file, add a follow-up question, and then initiate a chat session on that file. This creates a tight feedback loop for code analysis, refactoring, and documentation.
