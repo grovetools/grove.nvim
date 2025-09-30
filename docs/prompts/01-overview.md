@@ -1,12 +1,34 @@
-# Documentation Task: Introduction
+Generate an overview section for grove-nvim.
 
-You are an expert technical writer creating documentation for the `grove-nvim` Neovim plugin.
+## Requirements
+Create a comprehensive overview that includes:
 
-## Task
-Write a clear, engaging introduction that:
-- Explains that `grove-nvim` is a Neovim plugin that acts as a bridge to the `grove` AI development ecosystem, specifically `grove-flow`.
-- Highlights its key features: in-editor AI chat, powerful multi-step "Plan" management, and streamlined code-to-chat workflows.
-- Describes the problem it solves: reducing context switching by bringing powerful AI workflow tools directly into Neovim.
-- Identifies the target audience: Developers who use Neovim and want to integrate complex AI-driven development tasks into their workflow.
+1. **High-level description**: What grove-nvim is and its purpose as a Neovim plugin for Grove integration
+2. **Animated GIF placeholder**: Include `<!-- placeholder for animated gif -->`
+3. **Key features**: Document these specific features:
+   - In-editor AI Chat (`:GroveChatRun`) for interactive conversations
+   - Plan Management with interactive picker (`:GrovePlan`), plan creation (`:GrovePlanInit`), and plan extraction from buffers (`:GrovePlanExtract`)
+   - "Code-to-Chat" workflow using Target Files (`:GroveSetTarget`, `:'<,'>GroveTextRun`)
+   - Integration with grove-flow plans and job management
+4. **How it works**: Provide a more technical description and exactly what happens under the hood
+5. **Installation**: Include brief installation instructions using the standard `grove install grove-nvim` method
 
-Reference `README.md` for a high-level overview and `plugin/grove.lua` for the feature set.
+## Installation Format
+Include this condensed installation section at the bottom:
+
+### Installation
+
+Install grove-nvim using the Grove meta-tool:
+```bash
+grove install grove-nvim
+```
+
+Then add to your Neovim configuration. For example, with lazy.nvim:
+```lua
+{ "mattsolo1/grove-nvim" }
+```
+
+Grove-nvim requires the Grove ecosystem. See the [Grove Installation Guide](https://github.com/mattsolo1/grove-meta/blob/main/docs/02-installation.md) for setup instructions.
+
+## Context
+Grove-nvim is a Neovim plugin that integrates the Grove AI development ecosystem directly into your editor, enabling seamless access to Grove tools and workflows.

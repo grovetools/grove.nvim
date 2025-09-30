@@ -1,8 +1,8 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/mattsolo1/grove-docgen/main/schema/docgen.config.schema.json
-category: Neovim Plugin
+category: Developer Tools
 description: A Neovim plugin that integrates the Grove AI development ecosystem directly into your editor.
 enabled: true
-title: grove-nvim
+title: Grove Neovim
 settings:
   model: gemini-2.5-pro
   output_dir: docs
@@ -16,33 +16,13 @@ sections:
     output: 01-overview.md
     prompt: prompts/01-overview.md
     title: Overview
-  - name: installation
-    order: 2
-    output: 02-installation.md
-    prompt: prompts/02-installation.md
-    title: Installation
   - name: configuration
-    order: 3
-    output: 03-configuration.md
+    order: 2
+    output: 02-configuration.md
     prompt: prompts/03-configuration.md
     title: Configuration
-  - name: commands-and-usage
-    order: 4
-    output: 04-commands-and-usage.md
-    prompt: prompts/04-commands-and-usage.md
-    title: Commands and Usage
-  - name: keybindings
-    order: 5
-    output: 05-keybindings.md
-    prompt: prompts/05-keybindings.md
-    title: Keybindings Reference
-  - name: core-concepts
-    order: 6
-    output: 06-core-concepts.md
-    prompt: prompts/06-core-concepts.md
-    title: Core Concepts
-  - name: development
-    order: 7
-    output: 07-development.md
-    prompt: prompts/07-development.md
-    title: Development & Contributing
+  - name: examples
+    order: 3
+    output: 03-examples.md
+    prompt: prompts/02-examples.md
+    title: Examples
