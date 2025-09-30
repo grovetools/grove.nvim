@@ -10,6 +10,12 @@ settings:
   rules_file: docs.rules
   structured_output_file: pkg/docs/docs.json
   system_prompt: default
+readme:
+  generate_toc: true
+  template: docs/README.md.tpl
+  output: README.md
+  strip_lines: 2
+  source_section: overview
 sections:
   - name: overview
     order: 1
