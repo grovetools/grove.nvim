@@ -51,8 +51,8 @@ Grove-nvim requires the Grove ecosystem. See the [Grove Installation Guide](http
 <!-- DOCGEN:TOC:START -->
 
 See the [documentation](docs/) for detailed usage instructions:
-- [Overview](docs/01-overview.md) - <img src="./images/grove-neovim-readme.svg" width="60%" />
-- [Configuration](docs/02-configuration.md) - This document provides instructions for installing, configuring, and using th...
-- [Examples](docs/03-examples.md) - This document provides practical examples for using `grove-nvim`, demonstrati...
+- [Overview](docs/01-overview.md)
+- [Configuration](docs/02-configuration.md)
+- [Examples](docs/03-examples.md)
 
 <!-- DOCGEN:TOC:END -->
