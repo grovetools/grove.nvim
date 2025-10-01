@@ -4,7 +4,7 @@ This document provides instructions for installing, configuring, and using the k
 
 ## 1. Installation
 
-`grove-nvim` requires the Grove ecosystem to be installed and available in your `PATH`.
+The `grove-nvim` plugin requires the Grove ecosystem to be installed and available in your `PATH`.
 
 1.  **Install the plugin binary** using the Grove meta-tool:
     ```bash
@@ -17,7 +17,6 @@ This document provides instructions for installing, configuring, and using the k
     ```lua
     { "mattsolo1/grove-nvim" }
     ```
-    ``
 
 The plugin will be loaded automatically on startup.
 
@@ -25,17 +24,17 @@ The plugin will be loaded automatically on startup.
 
 ### Plugin Setup
 
-The `grove-nvim` plugin is designed to work out-of-the-box with minimal setup. It does not have or require a `setup()` function. Once installed and loaded by your plugin manager, all commands and keybindings are immediately available.
+The `grove-nvim` plugin is designed to work after installation with no extra setup. It does not have or require a `setup()` function. Once loaded by your plugin manager, all commands and keybindings are available.
 
 ### Statusline Integration
 
-The plugin provides a status function to indicate when a background chat job is active. This is primarily used for the `:GroveChatRun silent` command, which displays a spinner in the statusline instead of opening a terminal.
+The plugin provides a status function to indicate when a background chat job is active. This is used for the `:GroveChatRun silent` command, which runs a job in the background and displays a spinner in the statusline instead of opening a terminal.
 
 The function `require('grove-nvim').status()` returns a string containing a spinner animation and the text "Grove" when a job is running, and an empty string otherwise. It is implemented in `lua/grove-nvim/init.lua`.
 
 #### Lualine Example
 
-To integrate with `lualine.nvim`, add the component to your `lualine_x` or `lualine_y` sections.
+To integrate with `lualine.nvim`, add the component to your configuration.
 
 ```lua
 -- ~/.config/nvim/lua/plugins/lualine.lua
@@ -66,7 +65,7 @@ This configuration ensures the Grove component only appears in the statusline wh
 
 ## 3. Keybindings
 
-The following tables document all default keybindings provided by `grove-nvim`, sourced from `plugin/grove.lua`.
+The following tables document the default keybindings provided by `grove-nvim`, sourced from `plugin/grove.lua`.
 
 ### Plan Management
 

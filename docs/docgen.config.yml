@@ -22,6 +22,7 @@ sections:
     output: 01-overview.md
     prompt: prompts/01-overview.md
     title: Overview
+    agg_strip_lines: 2
   - name: configuration
     order: 2
     output: 02-configuration.md
