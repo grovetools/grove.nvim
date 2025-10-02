@@ -110,4 +110,135 @@ function M.status()
   return ''
 end
 
+--- Parse YAML frontmatter from current buffer
+--- @return table|nil Frontmatter data or nil if not found
+local function parse_frontmatter()
+  local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+
+  -- Check if file starts with ---
+  if #lines < 3 or lines[1] ~= '---' then
+    return nil
+  end
+
+  -- Find the closing ---
+  local end_line = nil
+  for i = 2, #lines do
+    if lines[i] == '---' then
+      end_line = i
+      break
+    end
+  end
+
+  if not end_line then
+    return nil
+  end
+
+  -- Parse YAML frontmatter (simple key: value parsing)
+  local frontmatter = {}
+  for i = 2, end_line - 1 do
+    local line = lines[i]
+    local key, value = line:match('^([%w_]+):%s*(.+)$')
+    if key and value then
+      -- Remove quotes from value if present
+      value = value:gsub('^["\'](.+)["\']$', '%1')
+      frontmatter[key] = value
+    end
+  end
+
+  return frontmatter
+end
+
+--- Edit context rules - either job-specific or default .grove/rules
+function M.edit_context_rules()
+  local buf_path = vim.api.nvim_buf_get_name(0)
+
+  -- Try to parse frontmatter to check for rules_file
+  local frontmatter = parse_frontmatter()
+  local rules_file = nil
+
+  if frontmatter and frontmatter.rules_file then
+    -- Job has a custom rules file
+    rules_file = frontmatter.rules_file
+
+    -- Resolve the path relative to the current file's directory
+    local current_dir = vim.fn.fnamemodify(buf_path, ':h')
+    local rules_path = vim.fn.simplify(current_dir .. '/' .. rules_file)
+
+    -- Check if the rules file exists
+    if vim.fn.filereadable(rules_path) == 1 then
+      vim.cmd('edit ' .. vim.fn.fnameescape(rules_path))
+      vim.notify('Grove: Editing job-specific rules: ' .. rules_file, vim.log.levels.INFO)
+      return
+    else
+      -- Rules file doesn't exist, ask if user wants to create it
+      local choice = vim.fn.confirm(
+        'Job-specific rules file not found: ' .. rules_file .. '\nCreate it?',
+        '&Yes\n&No\n&Edit .grove/rules instead',
+        1
+      )
+
+      if choice == 1 then
+        -- Create the rules directory if needed
+        local rules_dir = vim.fn.fnamemodify(rules_path, ':h')
+        vim.fn.mkdir(rules_dir, 'p')
+
+        -- Create the file with a template
+        local template = {
+          '# Context rules for job: ' .. vim.fn.fnamemodify(buf_path, ':t'),
+          '# Add patterns to include files, one per line',
+          '# Use ! prefix to exclude',
+          '',
+          '# Examples:',
+          '#   *.go',
+          '#   !*_test.go',
+          '#   src/**/*.js',
+          '',
+        }
+        vim.fn.writefile(template, rules_path)
+        vim.cmd('edit ' .. vim.fn.fnameescape(rules_path))
+        vim.notify('Grove: Created job-specific rules file', vim.log.levels.INFO)
+        return
+      elseif choice == 3 then
+        -- Fall through to edit .grove/rules
+      else
+        -- User cancelled
+        return
+      end
+    end
+  end
+
+  -- No job-specific rules, or user chose to edit .grove/rules
+  -- Find .grove/rules by walking up the directory tree
+  local current_dir = vim.fn.expand('%:p:h')
+  local max_depth = 10
+  local depth = 0
+
+  while depth < max_depth do
+    local rules_path = current_dir .. '/.grove/rules'
+    if vim.fn.filereadable(rules_path) == 1 then
+      vim.cmd('edit ' .. vim.fn.fnameescape(rules_path))
+      vim.notify('Grove: Editing .grove/rules', vim.log.levels.INFO)
+      return
+    end
+
+    -- Go up one directory
+    local parent = vim.fn.fnamemodify(current_dir, ':h')
+    if parent == current_dir then
+      -- Reached root
+      break
+    end
+    current_dir = parent
+    depth = depth + 1
+  end
+
+  -- .grove/rules not found, run cx edit
+  local cx_path = vim.fn.expand('~/.grove/bin/cx')
+  if vim.fn.executable(cx_path) == 1 then
+    vim.cmd('terminal ' .. cx_path .. ' edit')
+    vim.notify('Grove: Running cx edit', vim.log.levels.INFO)
+  else
+    vim.notify('Grove: .grove/rules not found and cx not available', vim.log.levels.ERROR)
+  end
+end
+
 return M

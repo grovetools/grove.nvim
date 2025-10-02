@@ -65,6 +65,18 @@ vim.api.nvim_create_user_command(
   }
 )
 
+-- Context Commands
+vim.api.nvim_create_user_command(
+  'GroveEditContext',
+  function()
+    require('grove-nvim').edit_context_rules()
+  end,
+  {
+    nargs = 0,
+    desc = 'Edit context rules (job-specific if in frontmatter, otherwise .grove/rules)'
+  }
+)
+
 -- Text Commands
 vim.api.nvim_create_user_command(
   'GroveSetTarget',
@@ -116,6 +128,7 @@ vim.api.nvim_create_user_command(
 vim.keymap.set('n', '<leader>fp', '<cmd>GrovePlan<CR>', { desc = 'Grove Plans' })
 vim.keymap.set('n', '<leader>fpx', '<cmd>GrovePlanExtract<CR>', { desc = 'Grove Plan (Extract from buffer)' })
 vim.keymap.set('n', '<leader>fc', '<cmd>GroveChatRun<CR>', { desc = 'Grove Chat Run' })
+vim.keymap.set('n', '<leader>fe', '<cmd>GroveEditContext<CR>', { desc = 'Grove Edit Context Rules' })
 vim.keymap.set('n', '<leader>jn', '<cmd>GroveAddJob<CR>', { desc = 'Grove Add Job (New)' })
 vim.keymap.set('n', '<leader>ji', '<cmd>GroveAddJobTUI<CR>', { desc = 'Grove Add Job (TUI)' })
 vim.keymap.set('v', '<leader>fq', '<cmd>GroveText<CR>', { desc = 'Grove Ask Question (Flow)' })
