@@ -13,7 +13,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GrovePlan',
   function()
-    require('grove-nvim.plan').picker()
+    require('grove-nvim.grove').picker()
   end,
   {
     nargs = 0,
@@ -24,7 +24,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GrovePlanInit',
   function()
-    require('grove-nvim.plan').init()
+    require('grove-nvim.grove').init()
   end,
   {
     nargs = 0,
@@ -35,7 +35,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GrovePlanExtract',
   function()
-    require('grove-nvim.plan').extract_from_buffer()
+    require('grove-nvim.grove').extract_from_buffer()
   end,
   {
     nargs = 0,
@@ -46,7 +46,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveAddJob',
   function()
-    require('grove-nvim.plan').add_job_to_active_plan()
+    require('grove-nvim.grove').add_job_to_active_plan()
   end,
   {
     nargs = 0,
@@ -57,7 +57,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveAddJobTUI',
   function()
-    require('grove-nvim.plan').add_job_tui()
+    require('grove-nvim.grove').add_job_tui()
   end,
   {
     nargs = 0,
@@ -68,7 +68,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GrovePlanTUI',
   function()
-    require('grove-nvim.plan').open_plan_tui()
+    require('grove-nvim.grove').open_plan_tui()
   end,
   {
     nargs = 0,
@@ -79,7 +79,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GrovePlanStatusTUI',
   function()
-    require('grove-nvim.plan').open_status_tui()
+    require('grove-nvim.grove').open_status_tui()
   end,
   {
     nargs = 0,
@@ -90,7 +90,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveSessionize',
   function()
-    require('grove-nvim.plan').open_gmux_sessionize()
+    require('grove-nvim.grove').open_gmux_sessionize()
   end,
   {
     nargs = 0,
@@ -101,7 +101,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveContextView',
   function()
-    require('grove-nvim.plan').open_cx_view()
+    require('grove-nvim.grove').open_cx_view()
   end,
   {
     nargs = 0,
@@ -112,7 +112,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveWorkspaceStatus',
   function()
-    require('grove-nvim.plan').open_workspace_status()
+    require('grove-nvim.grove').open_workspace_status()
   end,
   {
     nargs = 0,
@@ -123,7 +123,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveWorkspacePlansList',
   function()
-    require('grove-nvim.plan').open_workspace_plans_list()
+    require('grove-nvim.grove').open_workspace_plans_list()
   end,
   {
     nargs = 0,
@@ -134,7 +134,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveReleaseTUI',
   function()
-    require('grove-nvim.plan').open_release_tui()
+    require('grove-nvim.grove').open_release_tui()
   end,
   {
     nargs = 0,
@@ -145,7 +145,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveLogsTUI',
   function()
-    require('grove-nvim.plan').open_logs_tui()
+    require('grove-nvim.grove').open_logs_tui()
   end,
   {
     nargs = 0,
@@ -156,7 +156,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveConfigAnalyzeTUI',
   function()
-    require('grove-nvim.plan').open_config_analyze_tui()
+    require('grove-nvim.grove').open_config_analyze_tui()
   end,
   {
     nargs = 0,
@@ -167,7 +167,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveNBManage',
   function()
-    require('grove-nvim.plan').open_nb_manage()
+    require('grove-nvim.grove').open_nb_manage()
   end,
   {
     nargs = 0,
@@ -178,7 +178,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveHooksSessions',
   function()
-    require('grove-nvim.plan').open_hooks_sessions_browse()
+    require('grove-nvim.grove').open_hooks_sessions_browse()
   end,
   {
     nargs = 0,
@@ -189,7 +189,7 @@ vim.api.nvim_create_user_command(
 vim.api.nvim_create_user_command(
   'GroveGmuxKeymap',
   function()
-    require('grove-nvim.plan').open_gmux_keymap()
+    require('grove-nvim.grove').open_gmux_keymap()
   end,
   {
     nargs = 0,
