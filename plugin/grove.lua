@@ -65,6 +65,105 @@ vim.api.nvim_create_user_command(
   }
 )
 
+vim.api.nvim_create_user_command(
+  'GrovePlanTUI',
+  function()
+    require('grove-nvim.plan').open_plan_tui()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open the Grove Plan TUI (all plans).'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GrovePlanStatusTUI',
+  function()
+    require('grove-nvim.plan').open_status_tui()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open the Grove Plan Status TUI for active plan.'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GroveSessionize',
+  function()
+    require('grove-nvim.plan').open_gmux_sessionize()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open Grove Sessionize (gmux sz) TUI.'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GroveContextView',
+  function()
+    require('grove-nvim.plan').open_cx_view()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open Grove Context View (cx view) TUI.'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GroveWorkspaceStatus',
+  function()
+    require('grove-nvim.plan').open_workspace_status()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open Grove Workspace Status (grove ws status).'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GroveReleaseTUI',
+  function()
+    require('grove-nvim.plan').open_release_tui()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open Grove Release TUI (grove release tui).'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GroveLogsTUI',
+  function()
+    require('grove-nvim.plan').open_logs_tui()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open Grove Logs TUI (grove logs -i).'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GroveConfigAnalyzeTUI',
+  function()
+    require('grove-nvim.plan').open_config_analyze_tui()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open Grove Config Analyze TUI (grove config analyze --tui).'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GroveNBManage',
+  function()
+    require('grove-nvim.plan').open_nb_manage()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open NB Manage TUI (nb manage).'
+  }
+)
+
 -- Context Commands
 vim.api.nvim_create_user_command(
   'GroveEditContext',
@@ -127,8 +226,17 @@ vim.api.nvim_create_user_command(
 -- Keybindings
 vim.keymap.set('n', '<leader>fp', '<cmd>GrovePlan<CR>', { desc = 'Grove Plans' })
 vim.keymap.set('n', '<leader>fpx', '<cmd>GrovePlanExtract<CR>', { desc = 'Grove Plan (Extract from buffer)' })
+vim.keymap.set('n', '<leader>fpt', '<cmd>GrovePlanTUI<CR>', { desc = 'Grove Plan TUI' })
+vim.keymap.set('n', '<leader>fps', '<cmd>GrovePlanStatusTUI<CR>', { desc = 'Grove Plan Status TUI' })
 vim.keymap.set('n', '<leader>fc', '<cmd>GroveChatRun<CR>', { desc = 'Grove Chat Run' })
+vim.keymap.set('n', '<leader>fC', '<cmd>GroveConfigAnalyzeTUI<CR>', { desc = 'Grove Config Analyze TUI' })
 vim.keymap.set('n', '<leader>fe', '<cmd>GroveEditContext<CR>', { desc = 'Grove Edit Context Rules' })
+vim.keymap.set('n', '<leader>fs', '<cmd>GroveSessionize<CR>', { desc = 'Grove Sessionize' })
+vim.keymap.set('n', '<leader>fv', '<cmd>GroveContextView<CR>', { desc = 'Grove Context View' })
+vim.keymap.set('n', '<leader>fw', '<cmd>GroveWorkspaceStatus<CR>', { desc = 'Grove Workspace Status' })
+vim.keymap.set('n', '<leader>fl', '<cmd>GroveLogsTUI<CR>', { desc = 'Grove Logs TUI' })
+vim.keymap.set('n', '<leader>fn', '<cmd>GroveNBManage<CR>', { desc = 'NB Manage' })
+vim.keymap.set('n', '<leader>frl', '<cmd>GroveReleaseTUI<CR>', { desc = 'Grove Release TUI' })
 vim.keymap.set('n', '<leader>jn', '<cmd>GroveAddJob<CR>', { desc = 'Grove Add Job (New)' })
 vim.keymap.set('n', '<leader>ji', '<cmd>GroveAddJobTUI<CR>', { desc = 'Grove Add Job (TUI)' })
 vim.keymap.set('v', '<leader>fq', '<cmd>GroveText<CR>', { desc = 'Grove Ask Question (Flow)' })
