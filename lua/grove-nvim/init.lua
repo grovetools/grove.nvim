@@ -254,14 +254,8 @@ function M.edit_context_rules()
   end
 
   -- No job-specific rules, or user chose to edit .grove/rules
-  -- Find .grove/rules by walking up the directory tree
-  local current_dir = vim.fn.expand('%:p:h')
-
-  -- If current buffer has no file path, use cwd instead
-  if current_dir == '' then
-    current_dir = vim.fn.getcwd()
-  end
-
+  -- Find .grove/rules by walking up from the working directory
+  local current_dir = vim.fn.getcwd()
   local max_depth = 10
   local depth = 0
 
@@ -269,7 +263,7 @@ function M.edit_context_rules()
     local rules_path = current_dir .. '/.grove/rules'
     if vim.fn.filereadable(rules_path) == 1 then
       vim.cmd('edit ' .. vim.fn.fnameescape(rules_path))
-      vim.notify('Grove: Editing .grove/rules in ' .. current_dir, vim.log.levels.INFO)
+      vim.notify('Grove: Editing .grove/rules', vim.log.levels.INFO)
       return
     end
 
