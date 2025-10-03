@@ -121,6 +121,17 @@ vim.api.nvim_create_user_command(
 )
 
 vim.api.nvim_create_user_command(
+  'GroveWorkspacePlansList',
+  function()
+    require('grove-nvim.plan').open_workspace_plans_list()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open Grove Workspace Plans List (grove ws plans list --table).'
+  }
+)
+
+vim.api.nvim_create_user_command(
   'GroveReleaseTUI',
   function()
     require('grove-nvim.plan').open_release_tui()
@@ -161,6 +172,28 @@ vim.api.nvim_create_user_command(
   {
     nargs = 0,
     desc = 'Open NB Manage TUI (nb manage).'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GroveHooksSessions',
+  function()
+    require('grove-nvim.plan').open_hooks_sessions_browse()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open Grove Hooks Sessions Browse TUI (grove-hooks sessions browse).'
+  }
+)
+
+vim.api.nvim_create_user_command(
+  'GroveGmuxKeymap',
+  function()
+    require('grove-nvim.plan').open_gmux_keymap()
+  end,
+  {
+    nargs = 0,
+    desc = 'Open Gmux Key Manage TUI (gmux km).'
   }
 )
 
@@ -228,10 +261,13 @@ vim.keymap.set('n', '<leader>fp', '<cmd>GrovePlan<CR>', { desc = 'Grove Plans' }
 vim.keymap.set('n', '<leader>fpx', '<cmd>GrovePlanExtract<CR>', { desc = 'Grove Plan (Extract from buffer)' })
 vim.keymap.set('n', '<leader>fpt', '<cmd>GrovePlanTUI<CR>', { desc = 'Grove Plan TUI' })
 vim.keymap.set('n', '<leader>fps', '<cmd>GrovePlanStatusTUI<CR>', { desc = 'Grove Plan Status TUI' })
+vim.keymap.set('n', '<leader>fpl', '<cmd>GroveWorkspacePlansList<CR>', { desc = 'Grove Workspace Plans List' })
 vim.keymap.set('n', '<leader>fc', '<cmd>GroveChatRun<CR>', { desc = 'Grove Chat Run' })
 vim.keymap.set('n', '<leader>fC', '<cmd>GroveConfigAnalyzeTUI<CR>', { desc = 'Grove Config Analyze TUI' })
 vim.keymap.set('n', '<leader>fe', '<cmd>GroveEditContext<CR>', { desc = 'Grove Edit Context Rules' })
 vim.keymap.set('n', '<leader>fs', '<cmd>GroveSessionize<CR>', { desc = 'Grove Sessionize' })
+vim.keymap.set('n', '<leader>fk', '<cmd>GroveGmuxKeymap<CR>', { desc = 'Gmux Keymap' })
+vim.keymap.set('n', '<leader>fh', '<cmd>GroveHooksSessions<CR>', { desc = 'Grove Hooks Sessions' })
 vim.keymap.set('n', '<leader>fv', '<cmd>GroveContextView<CR>', { desc = 'Grove Context View' })
 vim.keymap.set('n', '<leader>fw', '<cmd>GroveWorkspaceStatus<CR>', { desc = 'Grove Workspace Status' })
 vim.keymap.set('n', '<leader>fl', '<cmd>GroveLogsTUI<CR>', { desc = 'Grove Logs TUI' })

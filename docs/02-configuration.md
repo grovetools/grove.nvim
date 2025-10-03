@@ -69,18 +69,51 @@ The following tables document the default keybindings provided by `grove-nvim`, 
 
 ### Plan Management
 
-| Keybinding       | Command                  | Description                        | Mode   |
-| ---------------- | ------------------------ | ---------------------------------- | ------ |
-| `<leader>fp`     | `:GrovePlan`             | Open the Grove Plan picker         | Normal |
-| `<leader>fpx`    | `:GrovePlanExtract`      | Extract a new plan from the buffer | Normal |
-| `<leader>jn`     | `:GroveAddJob`           | Add job to active plan (Form UI)   | Normal |
-| `<leader>ji`     | `:GroveAddJobTUI`        | Add job to active plan (TUI)       | Normal |
+| Keybinding       | Command                      | Description                               | Mode   |
+| ---------------- | ---------------------------- | ----------------------------------------- | ------ |
+| `<leader>fp`     | `:GrovePlan`                 | Open the Grove Plan picker                | Normal |
+| `<leader>fpx`    | `:GrovePlanExtract`          | Extract a new plan from the buffer        | Normal |
+| `<leader>fpt`    | `:GrovePlanTUI`              | Open flow plan TUI (all plans)            | Normal |
+| `<leader>fps`    | `:GrovePlanStatusTUI`        | Open flow plan status TUI (active plan)   | Normal |
+| `<leader>fpl`    | `:GroveWorkspacePlansList`   | Show all workspace plans in table         | Normal |
+| `<leader>jn`     | `:GroveAddJob`               | Add job to active plan (Form UI)          | Normal |
+| `<leader>ji`     | `:GroveAddJobTUI`            | Add job to active plan (TUI)              | Normal |
 
-### Chat
+### Chat & Flow
 
 | Keybinding       | Command                  | Description                        | Mode   |
 | ---------------- | ------------------------ | ---------------------------------- | ------ |
 | `<leader>fc`     | `:GroveChatRun`          | Run an interactive chat session    | Normal |
+
+### Context & Configuration
+
+| Keybinding       | Command                      | Description                        | Mode   |
+| ---------------- | ---------------------------- | ---------------------------------- | ------ |
+| `<leader>fe`     | `:GroveEditContext`          | Edit context rules                 | Normal |
+| `<leader>fv`     | `:GroveContextView`          | Open cx view TUI                   | Normal |
+| `<leader>fC`     | `:GroveConfigAnalyzeTUI`     | Open config analyze TUI            | Normal |
+
+### Sessions & Navigation
+
+| Keybinding       | Command                  | Description                        | Mode   |
+| ---------------- | ------------------------ | ---------------------------------- | ------ |
+| `<leader>fs`     | `:GroveSessionize`       | Open gmux sessionize TUI           | Normal |
+| `<leader>fk`     | `:GroveGmuxKeymap`       | Open gmux keymap manager TUI       | Normal |
+| `<leader>fh`     | `:GroveHooksSessions`    | Browse grove-hooks sessions        | Normal |
+
+### Workspace & Monitoring
+
+| Keybinding       | Command                  | Description                        | Mode   |
+| ---------------- | ------------------------ | ---------------------------------- | ------ |
+| `<leader>fw`     | `:GroveWorkspaceStatus`  | Show workspace status table        | Normal |
+| `<leader>fl`     | `:GroveLogsTUI`          | Open grove logs TUI                | Normal |
+| `<leader>fn`     | `:GroveNBManage`         | Open notebook manager TUI          | Normal |
+
+### Release Management
+
+| Keybinding       | Command                  | Description                        | Mode   |
+| ---------------- | ------------------------ | ---------------------------------- | ------ |
+| `<leader>frl`    | `:GroveReleaseTUI`       | Open grove release TUI             | Normal |
 
 ### Target File Workflow
 

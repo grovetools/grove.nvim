@@ -963,6 +963,11 @@ function M.open_workspace_status()
   run_in_float_term_output('grove ws status --cols git,release')
 end
 
+-- Open grove workspace plans list
+function M.open_workspace_plans_list()
+  run_in_float_term_output('grove ws plans list --table')
+end
+
 -- Open grove release TUI
 function M.open_release_tui()
   run_in_float_term_tui('grove release tui', 'Grove Release')
@@ -981,6 +986,16 @@ end
 -- Open nb manage TUI
 function M.open_nb_manage()
   run_in_float_term_tui('nb manage', 'NB Manage')
+end
+
+-- Open grove-hooks sessions browse TUI
+function M.open_hooks_sessions_browse()
+  run_in_float_term_tui('grove-hooks sessions browse', 'Grove Hooks Sessions')
+end
+
+-- Open gmux key manage TUI
+function M.open_gmux_keymap()
+  run_in_float_term_tui('gmux km', 'Gmux Key Manage')
 end
 
 -- Extract content from current buffer and create a new plan
