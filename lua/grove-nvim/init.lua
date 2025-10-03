@@ -6,12 +6,12 @@ local spinner_timer = nil
 
 --- Opens a floating terminal and runs the `neogrove chat` command for the current buffer.
 --- @param args table|nil The arguments object from `nvim_create_user_command`.
---- args.args can contain "silent", "vertical", "horizontal", "fullscreen".
+--- args.args can contain "silent", "vertical", "horizontal", "fullscreen", "float".
 function M.chat_run(args)
   args = args or {}
   local opts = {
     silent = false,
-    layout = 'vertical', -- New default layout
+    layout = 'float', -- New default layout: floating window
   }
 
   -- Parse string arguments into the opts table
@@ -19,7 +19,7 @@ function M.chat_run(args)
     for arg in string.gmatch(args.args, "%S+") do
       if arg == 'silent' then
         opts.silent = true
-      elseif arg == 'vertical' or arg == 'horizontal' or arg == 'fullscreen' then
+      elseif arg == 'vertical' or arg == 'horizontal' or arg == 'fullscreen' or arg == 'float' then
         opts.layout = arg
       end
     end
@@ -85,15 +85,61 @@ function M.chat_run(args)
     })
   else
     -- Open chat in a terminal with specified layout
-    if opts.layout == 'fullscreen' then
+    if opts.layout == 'float' then
+      -- Create floating window
+      local width = math.floor(vim.o.columns * 0.9)
+      local height = math.floor(vim.o.lines * 0.85)
+      local row = math.floor((vim.o.lines - height) / 2)
+      local col = math.floor((vim.o.columns - width) / 2)
+
+      local buf = vim.api.nvim_create_buf(false, true)
+      local win = vim.api.nvim_open_win(buf, true, {
+        relative = 'editor',
+        width = width,
+        height = height,
+        row = row,
+        col = col,
+        style = 'minimal',
+        border = 'rounded',
+        title = ' Grove Chat ',
+        title_pos = 'center',
+      })
+
+      vim.wo[win].winblend = 0
+      vim.bo[buf].buflisted = false
+      vim.wo[win].number = false
+      vim.wo[win].relativenumber = false
+      vim.wo[win].signcolumn = 'no'
+
+      vim.fn.termopen(neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
+        on_exit = function()
+          vim.schedule(function()
+            if vim.api.nvim_win_is_valid(win) then
+              vim.api.nvim_win_close(win, true)
+            end
+            if vim.api.nvim_buf_is_valid(buf) then
+              vim.api.nvim_buf_delete(buf, {force = true})
+            end
+          end)
+        end
+      })
+
+      vim.api.nvim_buf_set_keymap(buf, 't', '<Esc>', '<C-\\><C-n>:q<CR>', { noremap = true, silent = true })
+      vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ':q<CR>', { noremap = true, silent = true })
+      vim.cmd('startinsert')
+    elseif opts.layout == 'fullscreen' then
       vim.cmd('tabnew')
+      vim.cmd('terminal ' .. neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path))
+      vim.cmd('startinsert')
     elseif opts.layout == 'horizontal' then
       vim.cmd('new')
-    else -- 'vertical' is the default
+      vim.cmd('terminal ' .. neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path))
+      vim.cmd('startinsert')
+    else -- 'vertical'
       vim.cmd('vnew')
+      vim.cmd('terminal ' .. neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path))
+      vim.cmd('startinsert')
     end
-    vim.cmd('terminal ' .. neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path))
-    vim.cmd('startinsert')
   end
 end
 
