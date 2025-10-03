@@ -1,3 +1,5 @@
+## v0.1.1-nightly.9de9a75 (2025-10-03)
+
 ## v0.1.0 (2025-10-01)
 
 A new plan extraction workflow has been introduced, allowing for the creation of Grove plans directly from the content of the current Neovim buffer (2f89605). The plan name is now intelligently suggested by parsing the title from Markdown frontmatter (5fdc52c) or falling back to the buffer's filename (c997880). After creating a plan with an associated worktree, there is now an option to open it directly in a new tmux session, streamlining the transition from planning to execution (a6bae99).
