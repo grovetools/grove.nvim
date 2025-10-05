@@ -84,6 +84,9 @@ function M.chat_run(args)
       end,
     })
   else
+    -- Store the original buffer to refresh it later
+    local orig_buf = vim.api.nvim_get_current_buf()
+
     -- Open chat in a terminal with specified layout
     if opts.layout == 'float' then
       -- Create floating window
@@ -120,6 +123,12 @@ function M.chat_run(args)
             if vim.api.nvim_buf_is_valid(buf) then
               vim.api.nvim_buf_delete(buf, {force = true})
             end
+            -- Refresh the original buffer
+            if vim.api.nvim_buf_is_valid(orig_buf) then
+              vim.api.nvim_buf_call(orig_buf, function()
+                vim.cmd('checktime')
+              end)
+            end
           end)
         end
       })
@@ -129,15 +138,48 @@ function M.chat_run(args)
       vim.cmd('startinsert')
     elseif opts.layout == 'fullscreen' then
       vim.cmd('tabnew')
-      vim.cmd('terminal ' .. neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path))
+      vim.fn.termopen(neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
+        on_exit = function()
+          vim.schedule(function()
+            -- Refresh the original buffer
+            if vim.api.nvim_buf_is_valid(orig_buf) then
+              vim.api.nvim_buf_call(orig_buf, function()
+                vim.cmd('checktime')
+              end)
+            end
+          end)
+        end
+      })
       vim.cmd('startinsert')
     elseif opts.layout == 'horizontal' then
       vim.cmd('new')
-      vim.cmd('terminal ' .. neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path))
+      vim.fn.termopen(neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
+        on_exit = function()
+          vim.schedule(function()
+            -- Refresh the original buffer
+            if vim.api.nvim_buf_is_valid(orig_buf) then
+              vim.api.nvim_buf_call(orig_buf, function()
+                vim.cmd('checktime')
+              end)
+            end
+          end)
+        end
+      })
       vim.cmd('startinsert')
     else -- 'vertical'
       vim.cmd('vnew')
-      vim.cmd('terminal ' .. neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path))
+      vim.fn.termopen(neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
+        on_exit = function()
+          vim.schedule(function()
+            -- Refresh the original buffer
+            if vim.api.nvim_buf_is_valid(orig_buf) then
+              vim.api.nvim_buf_call(orig_buf, function()
+                vim.cmd('checktime')
+              end)
+            end
+          end)
+        end
+      })
       vim.cmd('startinsert')
     end
   end
