@@ -133,6 +133,13 @@ end, {
 	desc = "Edit context rules (job-specific if in frontmatter, otherwise .grove/rules)",
 })
 
+vim.api.nvim_create_user_command("GroveSetContextFile", function()
+	require("grove-nvim.grove").set_context_current_file()
+end, {
+	nargs = 0,
+	desc = "Set plan context to current file (!flow plan context set %)",
+})
+
 -- Text Commands
 vim.api.nvim_create_user_command("GroveSetTarget", function()
 	require("grove-nvim.text").set_target_file()
@@ -172,6 +179,7 @@ vim.keymap.set("n", "<leader>fpl", "<cmd>GroveWorkspacePlansList<CR>", { desc = 
 vim.keymap.set("n", "<leader>fc", "<cmd>GroveChatRun<CR>", { desc = "Grove Chat Run" })
 vim.keymap.set("n", "<leader>fC", "<cmd>GroveConfigAnalyzeTUI<CR>", { desc = "Grove Config Analyze TUI" })
 vim.keymap.set("n", "<leader>fe", "<cmd>GroveEditContext<CR>", { desc = "Grove Edit Context Rules" })
+vim.keymap.set("n", "<leader>fx", "<cmd>GroveSetContextFile<CR>", { desc = "Grove Set Context to Current File" })
 vim.keymap.set("n", "<leader>fs", "<cmd>GrovePlanStatusTUI<CR>", { desc = "Grove Plan Status TUI" })
 vim.keymap.set("n", "<leader>fz", "<cmd>GroveSessionize<CR>", { desc = "Grove Sessionize" })
 vim.keymap.set("n", "<leader>fk", "<cmd>GroveGmuxKeymap<CR>", { desc = "Gmux Keymap" })

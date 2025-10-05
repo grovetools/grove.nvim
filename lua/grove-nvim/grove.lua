@@ -29,6 +29,7 @@ M.open_status_tui = flow.open_status_tui
 
 -- Context (cx) functions
 M.open_cx_view = cx.view
+M.set_context_current_file = cx.set_current_file
 
 -- Gmux functions
 M.open_gmux_sessionize = gmux.sessionize
