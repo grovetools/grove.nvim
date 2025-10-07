@@ -1,5 +1,17 @@
 local M = {}
 
+-- Debounce function to limit how often a function is called
+function M.debounce(ms, fn)
+  local timer = vim.loop.new_timer()
+  return function(...)
+    local argv = {...}
+    timer:start(ms, 0, function()
+      timer:stop()
+      vim.schedule_wrap(fn)(unpack(argv))
+    end)
+  end
+end
+
 -- Helper function to create centered dropdown config
 function M.centered_dropdown(width, height)
   return {
