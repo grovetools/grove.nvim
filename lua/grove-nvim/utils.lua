@@ -162,10 +162,15 @@ function M.run_in_float_term_tui(command, title)
         if not vim.api.nvim_buf_is_valid(buf) then return end
 
         local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-        local output = table.concat(lines, "\n")
 
-        -- Search for our edit protocol string
-        local file_to_edit = output:match("EDIT_FILE:(.+)")
+        -- Search for EDIT_FILE in lines directly
+        local file_to_edit = nil
+        for _, line in ipairs(lines) do
+          if line:match("^EDIT_FILE:") then
+            file_to_edit = line:match("^EDIT_FILE:(.+)$")
+            break
+          end
+        end
 
         -- Always close the window and buffer
         if vim.api.nvim_win_is_valid(win) then vim.api.nvim_win_close(win, true) end
@@ -173,7 +178,8 @@ function M.run_in_float_term_tui(command, title)
 
         -- If a file was found, open it
         if file_to_edit then
-          file_to_edit = vim.trim(file_to_edit)
+          -- Strip ANSI escape codes and trim whitespace
+          file_to_edit = file_to_edit:gsub('\27%[[0-9;]*m', ''):gsub('%s+$', '')
           vim.notify("Grove: Opening " .. vim.fn.fnamemodify(file_to_edit, ':t'), vim.log.levels.INFO)
           vim.cmd('edit ' .. vim.fn.fnameescape(file_to_edit))
         end

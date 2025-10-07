@@ -10,8 +10,8 @@ function M.view()
 end
 
 -- Set context to current file (!flow plan context set %)
-function M.set_current_file()
-  local current_file = vim.fn.expand('%:p')
+function M.set_current_file(file_path)
+  local current_file = file_path or vim.fn.expand('%:p')
   if current_file == '' then
     vim.notify('Grove: No file in current buffer', vim.log.levels.ERROR)
     return
