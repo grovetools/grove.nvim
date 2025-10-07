@@ -22,26 +22,35 @@ syntax match groveRulesExclude      "^\s*!.*$"
 " Git URLs (lines starting with git@ or http(s)://)
 syntax match groveRulesGitUrl       "^\s*\(git@\|https\?:\/\/\)\S\+"
 
+" Alias workspace/repo identifier (the part before / in @alias:)
+" This captures workspace like "grove-core" in "@alias:grove-core/pkg/**"
+syntax match groveRulesAliasWorkspace "^\s*@\(alias\|a\):\s*\zs[^/]\+\ze/" contained
+
 " Alias value (the part after @alias: or @a:)
 " Uses \zs to start the match after the prefix.
-syntax match groveRulesAliasValue   "^\s*@\(alias\|a\):\s*\zs\S\+"
+syntax match groveRulesAliasValue   "^\s*@\(alias\|a\):\s*\zs\S\+" contains=groveRulesAliasWorkspace
 
 " Alias directive keyword (@alias: or @a:)
 syntax match groveRulesAliasDirective "^\s*@\(alias\|a\):"
 
-" Other directives (@view, @default, etc.)
-syntax match groveRulesDirective    "^\s*@\(view\|v\|default\|freeze-cache\|no-expire\|disable-cache\|expire-time\)\(:\)\?"
+" View directive keyword (@view: or @v:)
+syntax match groveRulesViewDirective "^\s*@\(view\|v\):"
+
+" Other directives (@default, etc.)
+syntax match groveRulesDirective    "^\s*@\(default\|freeze-cache\|no-expire\|disable-cache\|expire-time\)\(:\)\?"
 
 " --- Highlight Linking ---
 
 " Link our custom syntax groups to standard highlight groups.
 highlight default link groveRulesComment      Comment
 highlight default link groveRulesSeparator    Statement
-highlight default link groveRulesExclude      Error
+highlight default link groveRulesExclude      Exception
 highlight default link groveRulesGitUrl       String
-highlight default link groveRulesAliasValue   Identifier
-highlight default link groveRulesAliasDirective PreProc
-highlight default link groveRulesDirective    PreProc
+highlight default link groveRulesAliasValue   Type
+highlight default link groveRulesAliasWorkspace Identifier
+highlight default link groveRulesAliasDirective Keyword
+highlight default link groveRulesViewDirective Constant
+highlight default link groveRulesDirective    Keyword
 
 " --- Finalization ---
 

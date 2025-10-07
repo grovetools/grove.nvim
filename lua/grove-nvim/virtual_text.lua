@@ -64,35 +64,70 @@ local function update(bufnr)
 
       api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
 
-      local extmark_count = 0
+      -- Build a map of line numbers that have stats
+      local stats_by_line = {}
       for _, stat in ipairs(stats) do
-        local line = stat.lineNumber - 1
-        if line >= 0 then
+        stats_by_line[stat.lineNumber] = stat
+      end
+
+      -- Check all lines in the buffer to find rules without stats
+      local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+      local extmark_count = 0
+
+      for line_idx, line_text in ipairs(lines) do
+        local line_num = line_idx -- line numbers are 1-indexed in stats
+        local line_text_trimmed = vim.trim(line_text)
+
+        -- Check if this is a rule line (not comment, not separator, not config directive, not empty)
+        -- @alias: lines are rule lines and should get virtual text
+        -- @view: lines are config directives and don't contribute files directly
+        local is_rule_line = line_text_trimmed ~= ""
+          and not line_text_trimmed:match("^#")
+          and not line_text_trimmed:match("^%-%-%-")
+          and not line_text_trimmed:match("^@view:")
+          and not line_text_trimmed:match("^@v:")
+          and not line_text_trimmed:match("^@default")
+          and not line_text_trimmed:match("^@freeze%-cache")
+          and not line_text_trimmed:match("^@no%-expire")
+          and not line_text_trimmed:match("^@disable%-cache")
+          and not line_text_trimmed:match("^@expire%-time")
+
+        if is_rule_line then
+          local stat = stats_by_line[line_num]
           local virt_text = {}
 
-          -- Token count
-          table.insert(virt_text, { ' ~' .. format_compact(stat.totalTokens) .. ' tokens', 'GroveVirtualTextTokens' })
-
-          -- File count or single path
-          if stat.fileCount > 0 then
-            local path_text
-            if stat.fileCount == 1 and stat.resolvedPaths and #stat.resolvedPaths > 0 then
-              path_text = ' (' .. vim.fn.fnamemodify(stat.resolvedPaths[1], ':t') .. ')'
+          if stat then
+            if stat.fileCount == 0 then
+              -- Has stats but no matches
+              table.insert(virt_text, { ' ⚠ no matches', 'GroveVirtualTextNoMatch' })
             else
-              path_text = ' (' .. stat.fileCount .. ' files)'
+              -- Has stats with matches
+              table.insert(virt_text, { ' ~' .. format_compact(stat.totalTokens) .. ' tokens', 'GroveVirtualTextTokens' })
+
+              local path_text
+              if stat.fileCount == 1 and stat.resolvedPaths and #stat.resolvedPaths > 0 then
+                path_text = ' (' .. vim.fn.fnamemodify(stat.resolvedPaths[1], ':t') .. ')'
+              else
+                path_text = ' (' .. stat.fileCount .. ' files)'
+              end
+              table.insert(virt_text, { path_text, 'GroveVirtualTextPath' })
             end
-            table.insert(virt_text, { path_text, 'GroveVirtualTextPath' })
+          else
+            -- No stats for this rule line - invalid or not processed
+            table.insert(virt_text, { ' ⚠ no matches', 'GroveVirtualTextNoMatch' })
           end
 
-          local ok, err = pcall(api.nvim_buf_set_extmark, bufnr, ns_id, line, 0, {
-            virt_text = virt_text,
-            virt_text_pos = 'eol',
-          })
+          if #virt_text > 0 then
+            local ok, err = pcall(api.nvim_buf_set_extmark, bufnr, ns_id, line_idx - 1, 0, {
+              virt_text = virt_text,
+              virt_text_pos = 'eol',
+            })
 
-          if ok then
-            extmark_count = extmark_count + 1
-          else
-            vim.notify("Grove: Failed to set extmark on line " .. line .. ": " .. tostring(err), vim.log.levels.DEBUG)
+            if ok then
+              extmark_count = extmark_count + 1
+            else
+              vim.notify("Grove: Failed to set extmark on line " .. (line_idx - 1) .. ": " .. tostring(err), vim.log.levels.DEBUG)
+            end
           end
         end
       end
@@ -109,6 +144,7 @@ function M.setup(bufnr)
   -- Define highlight groups with more visible colors for testing
   vim.cmd('highlight default GroveVirtualTextTokens guifg=#888888 ctermfg=244')
   vim.cmd('highlight default GroveVirtualTextPath guifg=#666666 ctermfg=242')
+  vim.cmd('highlight default GroveVirtualTextNoMatch guifg=#e06c75 ctermfg=red')
 
   -- Debounce the update function to avoid excessive calls
   if not debounced_update then
