@@ -50,38 +50,34 @@ function source:get_completions(ctx, callback)
     local before_double_colon = after_directive:match("^(.*)::") or ""
     local after_double_colon = after_directive:match("::(.*)$") or ""
 
-    -- Use cx to resolve the project alias
-    local resolve_cmd = string.format('%s resolve %s --json 2>/dev/null',
+    local cx_path = vim.fn.exepath('cx')
+    if cx_path == '' then
+      return callback({ items = {} })
+    end
+
+    -- Use cx rules list --for-project to get rulesets
+    local rules_cmd = string.format('%s rules list --for-project %s --json 2>/dev/null',
       vim.fn.shellescape(cx_path),
       vim.fn.shellescape(before_double_colon))
 
-    utils.run_command({ 'sh', '-c', resolve_cmd }, function(stdout, stderr, exit_code)
+    utils.run_command({ 'sh', '-c', rules_cmd }, function(stdout, stderr, exit_code)
       if exit_code ~= 0 or stdout == "" then
         return callback({ items = {} })
       end
 
-      local ok, project = pcall(vim.json.decode, stdout)
-      if not ok or not project or not project.path then
+      local ok, rulesets = pcall(vim.json.decode, stdout)
+      if not ok or not rulesets then
         return callback({ items = {} })
       end
 
-      -- List .cx/*.rules files in the resolved project
-      local cx_dir = project.path .. '/.cx'
-      local rules_pattern = cx_dir .. '/*.rules'
-      local glob_results = vim.fn.glob(rules_pattern, false, true)
-
       local items = {}
-      for _, file_path in ipairs(glob_results) do
-        local filename = vim.fn.fnamemodify(file_path, ':t')
-        local ruleset_name = filename:match("^(.*)%.rules$")
-        if ruleset_name then
-          table.insert(items, {
-            label = ruleset_name,
-            insertText = ruleset_name,
-            detail = file_path,
-            kind = vim.lsp.protocol.CompletionItemKind.File,
-          })
-        end
+      for _, ruleset_name in ipairs(rulesets) do
+        table.insert(items, {
+          label = ruleset_name,
+          insertText = ruleset_name,
+          detail = before_double_colon .. '::' .. ruleset_name,
+          kind = vim.lsp.protocol.CompletionItemKind.File,
+        })
       end
 
       callback({

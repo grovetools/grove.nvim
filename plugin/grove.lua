@@ -133,6 +133,13 @@ end, {
 	desc = "Edit context rules (job-specific if in frontmatter, otherwise .grove/rules)",
 })
 
+vim.api.nvim_create_user_command("GroveRules", function()
+	require("grove-nvim.cx").rules()
+end, {
+	nargs = 0,
+	desc = "Open Grove Rules selector (cx rules)",
+})
+
 vim.api.nvim_create_user_command("GroveSetContextFile", function()
 	require("grove-nvim.grove").set_context_current_file()
 end, {
@@ -179,6 +186,7 @@ vim.keymap.set("n", "<leader>fpl", "<cmd>GroveWorkspacePlansList<CR>", { desc = 
 vim.keymap.set("n", "<leader>fc", "<cmd>GroveChatRun<CR>", { desc = "Grove Chat Run" })
 vim.keymap.set("n", "<leader>fC", "<cmd>GroveConfigAnalyzeTUI<CR>", { desc = "Grove Config Analyze TUI" })
 vim.keymap.set("n", "<leader>fe", "<cmd>GroveEditContext<CR>", { desc = "Grove Edit Context Rules" })
+vim.keymap.set("n", "<leader>fR", "<cmd>GroveRules<CR>", { desc = "Grove Rules Selector" })
 vim.keymap.set("n", "<leader>fx", function()
 	require("grove-nvim.grove").set_context_current_file(vim.fn.expand("%:p"))
 end, { desc = "Grove Set Context to Current File" })

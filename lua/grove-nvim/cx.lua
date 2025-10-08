@@ -23,4 +23,9 @@ function M.set_current_file(file_path)
   utils.run_in_float_term_tui('flow plan context set ' .. vim.fn.shellescape(current_file), 'Grove Set Context')
 end
 
+-- Open cx rules TUI selector
+function M.rules()
+  utils.run_in_float_term_tui('cx rules', 'Grove Rules')
+end
+
 return M
