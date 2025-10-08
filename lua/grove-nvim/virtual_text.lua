@@ -102,8 +102,20 @@ local function update(bufnr)
           local virt_text = {}
 
           if stat then
-            if stat.fileCount == 0 then
-              -- Has stats but no matches
+            -- Check if this is an exclusion rule with exclusion counts
+            if stat.excludedFileCount and stat.excludedFileCount > 0 then
+              -- Has stats with exclusions
+              local excluded_text = ' -' .. stat.excludedFileCount .. ' file'
+              if stat.excludedFileCount ~= 1 then
+                excluded_text = excluded_text .. 's'
+              end
+              table.insert(virt_text, { excluded_text, 'GroveVirtualTextExcluded' })
+
+              if stat.excludedTokens and stat.excludedTokens > 0 then
+                table.insert(virt_text, { ', -' .. format_compact(stat.excludedTokens) .. ' tokens', 'GroveVirtualTextExcluded' })
+              end
+            elseif stat.fileCount == 0 then
+              -- Has stats but no matches (for inclusion rules)
               table.insert(virt_text, { ' ⚠ no matches', 'GroveVirtualTextNoMatch' })
             else
               -- Has stats with matches
@@ -150,6 +162,7 @@ function M.setup(bufnr)
   vim.cmd('highlight default GroveVirtualTextTokens guifg=#888888 ctermfg=244')
   vim.cmd('highlight default GroveVirtualTextPath guifg=#666666 ctermfg=242')
   vim.cmd('highlight default GroveVirtualTextNoMatch guifg=#e06c75 ctermfg=red')
+  vim.cmd('highlight default GroveVirtualTextExcluded guifg=#888888 ctermfg=244')
 
   -- Debounce the update function to avoid excessive calls
   if not debounced_update then

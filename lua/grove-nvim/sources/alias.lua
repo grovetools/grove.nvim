@@ -71,9 +71,24 @@ function source:get_completions(ctx, callback)
     local items = {}
     for _, project in ipairs(projects) do
       if project.identifier then
+        -- Build a descriptive label
+        local label = project.name
+
+        -- Add parent context if it exists
+        if project.parent_path and project.parent_path ~= "" then
+          local parent_name = vim.fn.fnamemodify(project.parent_path, ':t')
+          label = parent_name .. ' > ' .. label
+        end
+
+        -- Add worktree indicator
+        if project.is_worktree then
+          label = label .. ' (worktree)'
+        end
+
         table.insert(items, {
-          label = project.identifier,
-          detail = project.Path,
+          label = label,
+          insertText = project.identifier,
+          detail = project.path,
           kind = vim.lsp.protocol.CompletionItemKind.Folder,
         })
       end
