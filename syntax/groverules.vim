@@ -39,6 +39,19 @@ syntax match groveRulesViewDirective "^\s*@\(view\|v\):"
 " Command directive (@cmd:)
 syntax match groveRulesCmdDirective "^\s*@cmd:"
 
+" Search directives (@find:, @grep:) - both standalone and inline
+syntax match groveRulesFindDirective "@find:" contained
+syntax match groveRulesGrepDirective "@grep:" contained
+
+" Search query (quoted string after @find: or @grep:)
+syntax region groveRulesSearchQuery start=+"+ end=+"+ contained
+
+" Inline search directive pattern (pattern @find: "query" or pattern @grep: "query")
+syntax match groveRulesInlineSearch "\s@\(find\|grep\):.*" contains=groveRulesFindDirective,groveRulesGrepDirective,groveRulesSearchQuery
+
+" Standalone search directive (line starting with @find: or @grep:)
+syntax match groveRulesStandaloneSearch "^\s*@\(find\|grep\):.*" contains=groveRulesFindDirective,groveRulesGrepDirective,groveRulesSearchQuery
+
 " Other directives (@default, etc.)
 syntax match groveRulesDirective    "^\s*@\(default\|freeze-cache\|no-expire\|disable-cache\|expire-time\)\(:\)\?"
 
@@ -55,6 +68,11 @@ highlight default link groveRulesAliasDirective Keyword
 highlight default link groveRulesViewDirective Constant
 highlight default link groveRulesCmdDirective Keyword
 highlight default link groveRulesDirective    Keyword
+highlight default link groveRulesFindDirective Function
+highlight default link groveRulesGrepDirective Function
+highlight default link groveRulesSearchQuery  String
+highlight default link groveRulesInlineSearch Normal
+highlight default link groveRulesStandaloneSearch Normal
 
 " --- Finalization ---
 

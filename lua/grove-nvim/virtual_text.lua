@@ -131,7 +131,20 @@ local function update(bufnr)
               end
             elseif stat.fileCount == 0 then
               -- Has stats but no matches (for inclusion rules)
-              table.insert(virt_text, { ' ⚠ no matches', 'GroveVirtualTextNoMatch' })
+              -- Check if there are filtered files that matched another rule
+              if stat.filteredByLine and #stat.filteredByLine > 0 then
+                -- Show which lines included the files that would have matched
+                local total_filtered = 0
+                local line_refs = {}
+                for _, filtered_group in ipairs(stat.filteredByLine) do
+                  total_filtered = total_filtered + filtered_group.count
+                  table.insert(line_refs, 'line ' .. filtered_group.lineNumber)
+                end
+                local filtered_text = ' ' .. total_filtered .. ' included by ' .. table.concat(line_refs, ', ')
+                table.insert(virt_text, { filtered_text, 'GroveVirtualTextFiltered' })
+              else
+                table.insert(virt_text, { ' ⚠ no matches', 'GroveVirtualTextNoMatch' })
+              end
             else
               -- Has stats with matches
               table.insert(virt_text, { ' ~' .. format_compact(stat.totalTokens) .. ' tokens', 'GroveVirtualTextTokens' })
@@ -143,6 +156,18 @@ local function update(bufnr)
                 path_text = ' (' .. stat.fileCount .. ' files)'
               end
               table.insert(virt_text, { path_text, 'GroveVirtualTextPath' })
+
+              -- Show filtered files info (files that matched base pattern but were filtered by directive)
+              if stat.filteredByLine and #stat.filteredByLine > 0 then
+                local total_filtered = 0
+                local line_refs = {}
+                for _, filtered_group in ipairs(stat.filteredByLine) do
+                  total_filtered = total_filtered + filtered_group.count
+                  table.insert(line_refs, filtered_group.lineNumber)
+                end
+                local filtered_text = ' +' .. total_filtered .. ' included by line ' .. table.concat(line_refs, ', ')
+                table.insert(virt_text, { filtered_text, 'GroveVirtualTextFiltered' })
+              end
             end
           else
             -- No stats for this rule line - invalid or not processed
@@ -178,6 +203,7 @@ function M.setup(bufnr)
   vim.cmd('highlight default GroveVirtualTextPath guifg=#666666 ctermfg=242')
   vim.cmd('highlight default GroveVirtualTextNoMatch guifg=#e06c75 ctermfg=red')
   vim.cmd('highlight default GroveVirtualTextExcluded guifg=#888888 ctermfg=244')
+  vim.cmd('highlight default GroveVirtualTextFiltered guifg=#d19a66 ctermfg=yellow')
 
   -- Debounce the update function to avoid excessive calls
   if not debounced_update then
