@@ -36,6 +36,9 @@ syntax match groveRulesAliasDirective "^\s*@\(alias\|a\):"
 " View directive keyword (@view: or @v:)
 syntax match groveRulesViewDirective "^\s*@\(view\|v\):"
 
+" Command directive (@cmd:)
+syntax match groveRulesCmdDirective "^\s*@cmd:"
+
 " Other directives (@default, etc.)
 syntax match groveRulesDirective    "^\s*@\(default\|freeze-cache\|no-expire\|disable-cache\|expire-time\)\(:\)\?"
 
@@ -50,6 +53,7 @@ highlight default link groveRulesAliasValue   Type
 highlight default link groveRulesAliasWorkspace Identifier
 highlight default link groveRulesAliasDirective Keyword
 highlight default link groveRulesViewDirective Constant
+highlight default link groveRulesCmdDirective Keyword
 highlight default link groveRulesDirective    Keyword
 
 " --- Finalization ---

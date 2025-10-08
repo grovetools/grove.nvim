@@ -54,6 +54,11 @@ local function update(bufnr)
       return
     end
 
+    if type(stats) ~= "table" then
+      vim.notify("Grove: stats is not a table (got " .. type(stats) .. ")", vim.log.levels.DEBUG)
+      return
+    end
+
     vim.notify("Grove: Got " .. #stats .. " line stats", vim.log.levels.DEBUG)
 
     vim.schedule(function()
