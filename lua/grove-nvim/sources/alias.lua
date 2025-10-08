@@ -84,13 +84,16 @@ function source:get_completions(ctx, callback)
         if num_parts == 1 then
           -- User typed: @a:g or @a:grove
           -- Suggest single-component aliases (just the name)
-          if not project.is_worktree then
+          -- Allow ecosystem worktrees (is_worktree AND is_ecosystem) but not regular repo worktrees
+          if not project.is_worktree or project.is_ecosystem then
             suggestion = project.name
             insert_text = project.name
             label = project.name
 
-            -- Add ecosystem indicator if it's part of one
-            if project.parent_ecosystem_path then
+            -- Add context indicator
+            if project.is_worktree and project.is_ecosystem then
+              label = label .. ' (ecosystem worktree)'
+            elseif project.parent_ecosystem_path then
               local eco_name = vim.fn.fnamemodify(project.parent_ecosystem_path, ':t')
               label = label .. ' (in ' .. eco_name .. ')'
             end
