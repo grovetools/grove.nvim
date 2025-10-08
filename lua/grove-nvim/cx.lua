@@ -17,7 +17,10 @@ function M.set_current_file(file_path)
     return
   end
 
-  utils.run_in_float_term_tui('!flow plan context set ' .. vim.fn.shellescape(current_file), 'Grove Set Context')
+  -- Debug: show the full path being used
+  vim.notify('Grove: Setting context for: ' .. current_file, vim.log.levels.INFO)
+
+  utils.run_in_float_term_tui('flow plan context set ' .. vim.fn.shellescape(current_file), 'Grove Set Context')
 end
 
 return M
