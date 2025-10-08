@@ -167,7 +167,13 @@ function M.get_active_plan()
 
   local lines = vim.fn.readfile(state_file)
   for _, line in ipairs(lines) do
-    local plan = line:match("^active_plan:%s*(.+)%s*$")
+    -- Check for new format: flow.active_plan:
+    local plan = line:match("^flow%.active_plan:%s*(.+)%s*$")
+    if plan then
+      return plan
+    end
+    -- Fallback to old format: active_plan:
+    plan = line:match("^active_plan:%s*(.+)%s*$")
     if plan then
       return plan
     end
