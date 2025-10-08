@@ -64,9 +64,15 @@ local function update(bufnr)
       return
     end
 
-    if not stats then
+    -- Handle vim.NIL and empty results
+    if not stats or stats == vim.NIL then
       vim.notify("Grove: stats is nil", vim.log.levels.DEBUG)
       return
+    end
+
+    -- Convert userdata (vim.empty_dict) to empty table
+    if type(stats) == "userdata" then
+      stats = {}
     end
 
     if type(stats) ~= "table" then
