@@ -102,8 +102,8 @@ function source:get_completions(ctx, callback)
           -- User typed: @a:grove-ecosystem: or @a:grove-ecosystem:c
           local first_part = parts[1]
 
-          -- Option 1: ecosystem:repo completion
-          -- MUST have parent_ecosystem_path and it must match first_part
+          -- Option 1: ecosystem:repo completion (top-level repos in ecosystem)
+          -- MUST have parent_ecosystem_path and NO worktree_name
           if project.parent_ecosystem_path and project.parent_ecosystem_path ~= ""
              and not project.is_worktree and not project.worktree_name then
             local eco_name = vim.fn.fnamemodify(project.parent_ecosystem_path, ':t')
@@ -115,7 +115,19 @@ function source:get_completions(ctx, callback)
             end
           end
 
-          -- Option 2: repo:worktree completion
+          -- Option 2: ecosystem-worktree:repo completion (repos in ecosystem worktree)
+          -- MUST have worktree_name that matches first_part and NOT be a worktree itself
+          if project.worktree_name and project.worktree_name ~= ""
+             and not project.is_worktree and not project.is_ecosystem then
+            if project.worktree_name == first_part then
+              suggestion = first_part .. ':' .. project.name
+              insert_text = first_part .. ':' .. project.name
+              label = first_part .. ' > ' .. project.name .. ' (in ecosystem worktree)'
+              detail = project.path
+            end
+          end
+
+          -- Option 3: repo:worktree completion (worktrees of a repo)
           -- MUST have parent_path and it must match first_part
           if project.is_worktree and project.parent_path and project.parent_path ~= "" then
             local parent_name = vim.fn.fnamemodify(project.parent_path, ':t')

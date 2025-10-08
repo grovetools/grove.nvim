@@ -76,10 +76,10 @@ local function parse_alias_from_line(line, cx_path)
       return alias_prefix, any_match.path
     end
   elseif #alias_parts == 2 then
-    -- Two component alias (ecosystem:repo or repo:worktree)
+    -- Two component alias (ecosystem:repo, ecosystem-worktree:repo, or repo:worktree)
     local first, second = alias_parts[1], alias_parts[2]
 
-    -- Try ecosystem:repo match
+    -- Try ecosystem:repo match (top-level repos in ecosystem)
     for _, ws in ipairs(workspaces) do
       if ws.parent_ecosystem_path then
         local eco_name = vim.fn.fnamemodify(ws.parent_ecosystem_path, ":t")
@@ -89,7 +89,15 @@ local function parse_alias_from_line(line, cx_path)
       end
     end
 
-    -- Try repo:worktree match
+    -- Try ecosystem-worktree:repo match (repos in ecosystem worktree)
+    for _, ws in ipairs(workspaces) do
+      if ws.worktree_name and ws.worktree_name == first
+         and ws.name == second and not ws.is_worktree and not ws.is_ecosystem then
+        return alias_prefix, ws.path
+      end
+    end
+
+    -- Try repo:worktree match (worktrees of a repo)
     for _, ws in ipairs(workspaces) do
       if ws.is_worktree and ws.parent_path then
         local parent_name = vim.fn.fnamemodify(ws.parent_path, ":t")
