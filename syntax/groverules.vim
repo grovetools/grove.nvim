@@ -22,16 +22,26 @@ syntax match groveRulesExclude      "^\s*!.*$"
 " Git URLs (lines starting with git@ or http(s)://)
 syntax match groveRulesGitUrl       "^\s*\(git@\|https\?:\/\/\)\S\+"
 
+" Ruleset import delimiter (::)
+syntax match groveRulesRulesetDelimiter "::" contained
+
+" Ruleset name (the part after ::)
+syntax match groveRulesRulesetName "\S\+$" contained
+
+" Ruleset import (project::ruleset pattern)
+" Captures the full @alias:project::ruleset or @a:project::ruleset
+syntax match groveRulesRulesetImport "^\s*@\(alias\|a\):\s*\S\+::\S\+$" contains=groveRulesAliasDirective,groveRulesRulesetDelimiter,groveRulesRulesetName
+
 " Alias workspace/repo identifier (the part before / in @alias:)
 " This captures workspace like "grove-core" in "@alias:grove-core/pkg/**"
-syntax match groveRulesAliasWorkspace "^\s*@\(alias\|a\):\s*\zs[^/]\+\ze/" contained
+syntax match groveRulesAliasWorkspace "^\s*@\(alias\|a\):\s*\zs[^/:]\+\ze/" contained
 
-" Alias value (the part after @alias: or @a:)
+" Alias value (the part after @alias: or @a:) - but not ruleset imports
 " Uses \zs to start the match after the prefix.
-syntax match groveRulesAliasValue   "^\s*@\(alias\|a\):\s*\zs\S\+" contains=groveRulesAliasWorkspace
+syntax match groveRulesAliasValue   "^\s*@\(alias\|a\):\s*\zs\S\+$" contains=groveRulesAliasWorkspace
 
 " Alias directive keyword (@alias: or @a:)
-syntax match groveRulesAliasDirective "^\s*@\(alias\|a\):"
+syntax match groveRulesAliasDirective "^\s*@\(alias\|a\):" contained
 
 " View directive keyword (@view: or @v:)
 syntax match groveRulesViewDirective "^\s*@\(view\|v\):"
@@ -65,6 +75,9 @@ highlight default link groveRulesGitUrl       String
 highlight default link groveRulesAliasValue   Type
 highlight default link groveRulesAliasWorkspace Identifier
 highlight default link groveRulesAliasDirective Keyword
+highlight default link groveRulesRulesetImport Type
+highlight default link groveRulesRulesetDelimiter Operator
+highlight default link groveRulesRulesetName String
 highlight default link groveRulesViewDirective Constant
 highlight default link groveRulesCmdDirective Keyword
 highlight default link groveRulesDirective    Keyword

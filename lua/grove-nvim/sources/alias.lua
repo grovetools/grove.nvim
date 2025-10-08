@@ -41,6 +41,60 @@ function source:get_completions(ctx, callback)
 
   -- Extract what's been typed after @a: or @alias:
   local after_directive = line_to_cursor:match("@a:([^%s]*)$") or line_to_cursor:match("@alias:([^%s]*)$") or ""
+
+  -- Check if this is a ruleset import (contains ::)
+  local is_ruleset_import = after_directive:find("::", 1, true) ~= nil
+
+  if is_ruleset_import then
+    -- Handle ruleset completion
+    local before_double_colon = after_directive:match("^(.*)::") or ""
+    local after_double_colon = after_directive:match("::(.*)$") or ""
+
+    -- Use cx to resolve the project alias
+    local resolve_cmd = string.format('%s resolve %s --json 2>/dev/null',
+      vim.fn.shellescape(cx_path),
+      vim.fn.shellescape(before_double_colon))
+
+    utils.run_command({ 'sh', '-c', resolve_cmd }, function(stdout, stderr, exit_code)
+      if exit_code ~= 0 or stdout == "" then
+        return callback({ items = {} })
+      end
+
+      local ok, project = pcall(vim.json.decode, stdout)
+      if not ok or not project or not project.path then
+        return callback({ items = {} })
+      end
+
+      -- List .cx/*.rules files in the resolved project
+      local cx_dir = project.path .. '/.cx'
+      local rules_pattern = cx_dir .. '/*.rules'
+      local glob_results = vim.fn.glob(rules_pattern, false, true)
+
+      local items = {}
+      for _, file_path in ipairs(glob_results) do
+        local filename = vim.fn.fnamemodify(file_path, ':t')
+        local ruleset_name = filename:match("^(.*)%.rules$")
+        if ruleset_name then
+          table.insert(items, {
+            label = ruleset_name,
+            insertText = ruleset_name,
+            detail = file_path,
+            kind = vim.lsp.protocol.CompletionItemKind.File,
+          })
+        end
+      end
+
+      callback({
+        items = items,
+        is_incomplete_backward = false,
+        is_incomplete_forward = false,
+      })
+    end)
+
+    return
+  end
+
+  -- Regular alias completion (not ruleset import)
   local parts = vim.split(after_directive, ":", { plain = true })
   local num_parts = #parts
 
