@@ -85,7 +85,9 @@ function source:get_completions(ctx, callback)
           -- User typed: @a:g or @a:grove
           -- Suggest single-component aliases (just the name)
           -- Allow ecosystem worktrees (is_worktree AND is_ecosystem) but not regular repo worktrees
-          if not project.is_worktree or project.is_ecosystem then
+          local should_include = not project.is_worktree or project.is_ecosystem
+
+          if should_include then
             suggestion = project.name
             insert_text = project.name
             label = project.name
