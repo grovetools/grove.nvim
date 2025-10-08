@@ -8,6 +8,7 @@ local meta = require('grove-nvim.meta')
 local nb = require('grove-nvim.nb')
 local hooks = require('grove-nvim.hooks')
 local data = require('grove-nvim.data')
+local rules = require('grove-nvim.rules')
 
 local M = {}
 
@@ -52,5 +53,8 @@ M.open_hooks_sessions_browse = hooks.sessions_browse
 M.get_templates = data.get_templates
 M.get_models = data.get_models
 M.get_active_plan = data.get_active_plan
+
+-- Rules functions
+M.preview_rule_files = rules.preview_rule_files
 
 return M

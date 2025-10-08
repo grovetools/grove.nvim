@@ -25,12 +25,27 @@ local function update(bufnr)
   local cx_path = vim.fn.exepath('cx')
   if cx_path == '' then return end
 
+  -- Get buffer contents and write to a temporary file
+  -- This ensures we analyze the current buffer state, not what's on disk
+  local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local temp_file = vim.fn.tempname()
+  local f = io.open(temp_file, 'w')
+  if not f then
+    vim.notify("Grove: Failed to create temp file", vim.log.levels.ERROR)
+    return
+  end
+  f:write(table.concat(lines, '\n'))
+  f:close()
+
   -- Use shell to redirect stderr since cx logs to stderr
   local cmd = string.format('%s stats --per-line %s 2>/dev/null',
     vim.fn.shellescape(cx_path),
-    vim.fn.shellescape(buf_path))
+    vim.fn.shellescape(temp_file))
 
   utils.run_command({ 'sh', '-c', cmd }, function(stdout, stderr, exit_code)
+    -- Clean up temp file
+    vim.fn.delete(temp_file)
+
     if exit_code ~= 0 then
       vim.notify("Grove: cx stats failed with exit code " .. exit_code, vim.log.levels.DEBUG)
       api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
@@ -175,7 +190,7 @@ function M.setup(bufnr)
     buffer = bufnr,
     callback = function() update(bufnr) end,
   })
-  api.nvim_create_autocmd('TextChanged', {
+  api.nvim_create_autocmd({'TextChanged', 'TextChangedI'}, {
     group = group,
     buffer = bufnr,
     callback = function() debounced_update(bufnr) end,
