@@ -61,12 +61,14 @@ local function update(bufnr)
     local ok, stats = pcall(vim.json.decode, stdout)
     if not ok then
       vim.notify("Grove: Failed to parse stats JSON: " .. tostring(stats), vim.log.levels.DEBUG)
+      api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
       return
     end
 
-    -- Handle vim.NIL and empty results
+    -- Handle vim.NIL (JSON null) and empty results
     if not stats or stats == vim.NIL then
-      vim.notify("Grove: stats is nil", vim.log.levels.DEBUG)
+      vim.notify("Grove: cx stats returned null (no stats available)", vim.log.levels.DEBUG)
+      api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
       return
     end
 
@@ -77,6 +79,7 @@ local function update(bufnr)
 
     if type(stats) ~= "table" then
       vim.notify("Grove: stats is not a table (got " .. type(stats) .. ")", vim.log.levels.DEBUG)
+      api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
       return
     end
 
@@ -123,9 +126,38 @@ local function update(bufnr)
           local virt_text = {}
 
           if stat then
-            -- Check if this is an exclusion rule with exclusion counts
+            -- First check if this has Git info - if so, show it
+            if stat.gitInfo then
+              -- Display Git repository information
+              -- Status indicator with color
+              if stat.gitInfo.status then
+                local status = stat.gitInfo.status
+                local status_hl = 'GroveVirtualTextGitStatus'
+                if status == 'audited' or status == 'approved' then
+                  status_hl = 'GroveVirtualTextGitApproved'
+                elseif status == 'not_audited' then
+                  status_hl = 'GroveVirtualTextGitNotAudited'
+                end
+                table.insert(virt_text, { ' [' .. status, status_hl })
+              end
+
+              -- Version
+              if stat.gitInfo.version and stat.gitInfo.version ~= '' then
+                table.insert(virt_text, { ' | ' .. stat.gitInfo.version, 'GroveVirtualTextGitVersion' })
+              end
+
+              -- Commit
+              if stat.gitInfo.commit then
+                table.insert(virt_text, { ' | ' .. stat.gitInfo.commit, 'GroveVirtualTextGitCommit' })
+              end
+
+              -- Close bracket
+              table.insert(virt_text, { ']', 'GroveVirtualTextGitStatus' })
+            end
+
+            -- Now show file/token counts (works for both git repos and regular patterns)
             if stat.excludedFileCount and stat.excludedFileCount > 0 then
-              -- Has stats with exclusions
+              -- Has exclusions
               local excluded_text = ' -' .. stat.excludedFileCount .. ' file'
               if stat.excludedFileCount ~= 1 then
                 excluded_text = excluded_text .. 's'
@@ -135,24 +167,11 @@ local function update(bufnr)
               if stat.excludedTokens and stat.excludedTokens > 0 then
                 table.insert(virt_text, { ', -' .. format_compact(stat.excludedTokens) .. ' tokens', 'GroveVirtualTextExcluded' })
               end
-            elseif stat.fileCount == 0 then
-              -- Has stats but no matches (for inclusion rules)
-              -- Check if there are filtered files that matched another rule
-              if stat.filteredByLine and #stat.filteredByLine > 0 then
-                -- Show which lines included the files that would have matched
-                local total_filtered = 0
-                local line_refs = {}
-                for _, filtered_group in ipairs(stat.filteredByLine) do
-                  total_filtered = total_filtered + filtered_group.count
-                  table.insert(line_refs, 'line ' .. filtered_group.lineNumber)
-                end
-                local filtered_text = ' ' .. total_filtered .. ' included by ' .. table.concat(line_refs, ', ')
-                table.insert(virt_text, { filtered_text, 'GroveVirtualTextFiltered' })
-              else
-                table.insert(virt_text, { ' ⚠ no matches', 'GroveVirtualTextNoMatch' })
-              end
-            else
-              -- Has stats with matches
+            end
+
+            -- Show inclusion counts
+            if stat.fileCount and stat.fileCount > 0 and stat.totalTokens and stat.totalTokens > 0 then
+              -- Has matches
               table.insert(virt_text, { ' ~' .. format_compact(stat.totalTokens) .. ' tokens', 'GroveVirtualTextTokens' })
 
               local path_text
@@ -173,6 +192,22 @@ local function update(bufnr)
                 end
                 local filtered_text = ' +' .. total_filtered .. ' included by line ' .. table.concat(line_refs, ', ')
                 table.insert(virt_text, { filtered_text, 'GroveVirtualTextFiltered' })
+              end
+            elseif stat.fileCount == 0 and not stat.gitInfo then
+              -- Has stats but no matches (for inclusion rules)
+              -- Check if there are filtered files that matched another rule
+              if stat.filteredByLine and #stat.filteredByLine > 0 then
+                -- Show which lines included the files that would have matched
+                local total_filtered = 0
+                local line_refs = {}
+                for _, filtered_group in ipairs(stat.filteredByLine) do
+                  total_filtered = total_filtered + filtered_group.count
+                  table.insert(line_refs, 'line ' .. filtered_group.lineNumber)
+                end
+                local filtered_text = ' ' .. total_filtered .. ' included by ' .. table.concat(line_refs, ', ')
+                table.insert(virt_text, { filtered_text, 'GroveVirtualTextFiltered' })
+              else
+                table.insert(virt_text, { ' ⚠ no matches', 'GroveVirtualTextNoMatch' })
               end
             end
           else
@@ -210,6 +245,13 @@ function M.setup(bufnr)
   vim.cmd('highlight default GroveVirtualTextNoMatch guifg=#e06c75 ctermfg=red')
   vim.cmd('highlight default GroveVirtualTextExcluded guifg=#888888 ctermfg=244')
   vim.cmd('highlight default GroveVirtualTextFiltered guifg=#d19a66 ctermfg=yellow')
+
+  -- Git repository info highlight groups
+  vim.cmd('highlight default GroveVirtualTextGitStatus guifg=#888888 ctermfg=244')
+  vim.cmd('highlight default GroveVirtualTextGitApproved guifg=#98c379 ctermfg=green')
+  vim.cmd('highlight default GroveVirtualTextGitNotAudited guifg=#d19a66 ctermfg=yellow')
+  vim.cmd('highlight default GroveVirtualTextGitVersion guifg=#61afef ctermfg=blue')
+  vim.cmd('highlight default GroveVirtualTextGitCommit guifg=#888888 ctermfg=244')
 
   -- Debounce the update function to avoid excessive calls
   if not debounced_update then
