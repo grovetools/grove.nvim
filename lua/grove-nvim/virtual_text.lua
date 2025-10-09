@@ -156,8 +156,11 @@ local function update(bufnr)
             end
 
             -- Now show file/token counts (works for both git repos and regular patterns)
-            if stat.excludedFileCount and stat.excludedFileCount > 0 then
-              -- Has exclusions
+            -- For ruleset imports (::), skip showing exclusions since they apply to the source project
+            local is_ruleset_import = stat.rule and stat.rule:match('::')
+
+            if stat.excludedFileCount and stat.excludedFileCount > 0 and not is_ruleset_import then
+              -- Has exclusions (only show for local rules, not imported rulesets)
               local excluded_text = ' -' .. stat.excludedFileCount .. ' file'
               if stat.excludedFileCount ~= 1 then
                 excluded_text = excluded_text .. 's'
