@@ -83,7 +83,7 @@ local function render()
 
 	-- Resize window based on content
 	local width = math.max(max_line_length + 2, 15)
-	local height = #lines
+	local height = math.max(#lines, 1) -- Ensure height is at least 1
 	if state.win and api.nvim_win_is_valid(state.win) then
 		api.nvim_win_set_config(state.win, {
 			relative = "editor",

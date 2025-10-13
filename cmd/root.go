@@ -16,6 +16,7 @@ func init() {
 	rootCmd.AddCommand(newPlanCmd())
 	rootCmd.AddCommand(newModelsCmd())
 	rootCmd.AddCommand(newTextCmd())
+	rootCmd.AddCommand(newInternalCmd())
 }
 
 func Execute() error {

@@ -9,6 +9,7 @@ local MARKS_MARKER_START = "# GROVE:MARKS:START - Managed by grove-nvim, do not 
 local MARKS_MARKER_END = "# GROVE:MARKS:END"
 
 local marks = {} -- In-memory cache of marked files
+local workspace = require('grove-nvim.workspace')
 
 --- Reads and parses the .grove/marks file into the in-memory table.
 -- @return table marks_table, boolean success
@@ -50,7 +51,7 @@ local function write_marks()
 	vim.fn.writefile(lines, marks_path)
 end
 
---- Synchronizes the contents of .grove/marks into .grove/rules.
+--- Synchronizes the contents of .grove/marks into .grove/rules using aliases.
 function M.sync_marks_to_rules()
 	read_marks()
 	local rules_path = vim.fn.getcwd() .. "/" .. RULES_FILE
@@ -74,22 +75,50 @@ function M.sync_marks_to_rules()
 		end
 	end
 
-	-- Add the new managed block if there are marks
+	-- Get sorted list of paths to convert
+	local paths_to_convert = {}
 	if next(marks) ~= nil then
-		table.insert(new_rules_lines, MARKS_MARKER_START)
 		local keys = {}
 		for k in pairs(marks) do
 			table.insert(keys, k)
 		end
 		table.sort(keys)
 		for _, k in ipairs(keys) do
-			table.insert(new_rules_lines, marks[k])
+			table.insert(paths_to_convert, { index = k, path = marks[k] })
 		end
-		table.insert(new_rules_lines, MARKS_MARKER_END)
 	end
 
-	vim.fn.writefile(new_rules_lines, rules_path)
-	vim.api.nvim_exec_autocmds("User", { pattern = "GroveMarksChanged" })
+	-- If no marks, just write the cleaned rules file and exit
+	if #paths_to_convert == 0 then
+		vim.fn.writefile(new_rules_lines, rules_path)
+		vim.api.nvim_exec_autocmds("User", { pattern = "GroveMarksChanged" })
+		return
+	end
+
+	-- Asynchronously convert all paths to aliases in a single batch
+	local paths_only = {}
+	for _, item in ipairs(paths_to_convert) do
+		table.insert(paths_only, item.path)
+	end
+
+	workspace.get_aliases_for_paths(paths_only, function(path_map)
+		if not path_map then
+			-- Error occurred, abort sync
+			vim.notify("Grove: Mark sync aborted due to alias resolution failure.", vim.log.levels.WARN)
+			return
+		end
+
+		-- Add the new managed block with aliased paths
+		table.insert(new_rules_lines, MARKS_MARKER_START)
+		for _, item in ipairs(paths_to_convert) do
+			local aliased_path = path_map[item.path] or item.path -- Fallback to original
+			table.insert(new_rules_lines, aliased_path)
+		end
+		table.insert(new_rules_lines, MARKS_MARKER_END)
+
+		vim.fn.writefile(new_rules_lines, rules_path)
+		vim.api.nvim_exec_autocmds("User", { pattern = "GroveMarksChanged" })
+	end)
 end
 
 --- Adds a file to the marks list.
