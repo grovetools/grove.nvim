@@ -245,24 +245,52 @@ function M.open_menu()
 		title_pos = "center",
 	})
 
-	-- Extract just the file paths in order
-	local paths = {}
+	-- Extract just the file paths (no numbers in buffer)
+	local lines = {}
 	local keys = {}
 	for k in pairs(marks) do
 		table.insert(keys, k)
 	end
 	table.sort(keys)
 	for _, k in ipairs(keys) do
-		table.insert(paths, marks[k])
+		table.insert(lines, marks[k])
 	end
 
-	-- Set buffer content (just paths, no @N prefix)
-	vim.api.nvim_buf_set_lines(buf, 0, -1, false, paths)
+	-- Set buffer content (paths only)
+	vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 
 	-- Set filetype for syntax highlighting
 	vim.bo[buf].filetype = "groverules"
 	vim.bo[buf].bufhidden = "wipe"
 	vim.bo[buf].buftype = "acwrite"
+
+	-- Function to refresh line numbers
+	local ns_id = vim.api.nvim_create_namespace("grove_marks_numbers")
+	local function refresh_line_numbers()
+		if not vim.api.nvim_buf_is_valid(buf) then
+			return
+		end
+		-- Clear existing marks
+		vim.api.nvim_buf_clear_namespace(buf, ns_id, 0, -1)
+		-- Get current lines
+		local current_lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
+		-- Add new marks
+		for i = 1, #current_lines do
+			vim.api.nvim_buf_set_extmark(buf, ns_id, i - 1, 0, {
+				virt_text = { { string.format("%d ", i), "LineNr" } },
+				virt_text_pos = "inline",
+			})
+		end
+	end
+
+	-- Initial render
+	refresh_line_numbers()
+
+	-- Refresh on text changes
+	vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
+		buffer = buf,
+		callback = refresh_line_numbers,
+	})
 
 	-- Buffer-local keymaps
 	vim.keymap.set("n", "<CR>", function()
@@ -299,10 +327,8 @@ function M.save_menu_contents(buf, marks_path)
 	local line_num = 1
 	for _, line in ipairs(lines) do
 		local trimmed = vim.trim(line)
-		-- Remove @N prefix if user added it
-		local path = trimmed:match("^@%d+%s+(.+)$") or trimmed
-		if path ~= "" then
-			marks[line_num] = path
+		if trimmed ~= "" then
+			marks[line_num] = trimmed
 			line_num = line_num + 1
 		end
 	end
@@ -327,8 +353,6 @@ end
 function M.goto_from_menu(win, buf)
 	local line = vim.api.nvim_get_current_line()
 	local path = vim.trim(line)
-	-- Remove @N prefix if present
-	path = path:match("^@%d+%s+(.+)$") or path
 
 	if path ~= "" then
 		-- Save before going to file
