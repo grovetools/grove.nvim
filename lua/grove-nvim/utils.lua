@@ -1,5 +1,16 @@
 local M = {}
 
+-- Format bytes into human-readable format
+function M.format_bytes(bytes)
+	if bytes < 1024 then
+		return string.format("%dB", bytes)
+	elseif bytes < 1024 * 1024 then
+		return string.format("%.1fKB", bytes / 1024)
+	else
+		return string.format("%.1fMB", bytes / (1024 * 1024))
+	end
+end
+
 -- Debounce function to limit how often a function is called
 function M.debounce(ms, fn)
   local timer = vim.loop.new_timer()

@@ -1,3 +1,6 @@
+-- Initialize the jump file watcher
+require("grove-nvim.watcher")
+
 vim.api.nvim_create_user_command("GroveChatRun", function(args)
 	require("grove-nvim").chat_run(args)
 end, {
@@ -203,4 +206,58 @@ vim.keymap.set("n", "<leader>jn", "<cmd>GroveAddJob<CR>", { desc = "Grove Add Jo
 vim.keymap.set("n", "<leader>ji", "<cmd>GroveAddJobTUI<CR>", { desc = "Grove Add Job (TUI)" })
 vim.keymap.set("v", "<leader>fq", "<cmd>GroveText<CR>", { desc = "Grove Ask Question (Flow)" })
 vim.keymap.set("v", "<leader>fr", "<cmd>GroveTextRun<CR>", { desc = "Grove Ask & Run (Flow)" })
+
+-- Marks Commands
+vim.api.nvim_create_user_command("GroveMarkFile", function()
+	require("grove-nvim.marks").add_file(vim.fn.expand("%:p"))
+end, {
+	nargs = 0,
+	desc = "Mark the current file for quick access.",
+})
+
+vim.api.nvim_create_user_command("GroveUnmarkFile", function()
+	require("grove-nvim.marks").remove_file(vim.fn.expand("%:p"))
+end, {
+	nargs = 0,
+	desc = "Unmark the current file.",
+})
+
+vim.api.nvim_create_user_command("GroveClearMarks", function()
+	require("grove-nvim.marks").clear()
+end, {
+	nargs = 0,
+	desc = "Clear all Grove marks.",
+})
+
+vim.api.nvim_create_user_command("GroveMarksMenu", function()
+	require("grove-nvim.marks").open_menu()
+end, {
+	nargs = 0,
+	desc = "Open the Grove marks menu.",
+})
+
+vim.api.nvim_create_user_command("GroveToggleMarksWindow", function()
+	require("grove-nvim.marks_float").toggle()
+end, {
+	nargs = 0,
+	desc = "Toggle the persistent Grove marks window.",
+})
+
+-- Keybindings for Marks
+vim.keymap.set("n", "<leader>ja", "<cmd>GroveMarkFile<CR>", { desc = "Grove Mark: Add file" })
+vim.keymap.set("n", "<leader>js", "<cmd>GroveMarksMenu<CR>", { desc = "Grove Mark: Show menu" })
+vim.keymap.set("n", "<leader>jj", "<cmd>GroveToggleMarksWindow<CR>", { desc = "Grove Mark: Toggle window" })
+vim.keymap.set("n", "<leader>jN", function()
+	require("grove-nvim.marks").next()
+end, { desc = "Grove Mark: Next file" })
+vim.keymap.set("n", "<leader>jP", function()
+	require("grove-nvim.marks").previous()
+end, { desc = "Grove Mark: Previous file" })
+
+-- Create mark shortcuts for 1-9
+for i = 1, 9 do
+	vim.keymap.set("n", "<leader>" .. i, function()
+		require("grove-nvim.marks").go_to(i)
+	end, { desc = "Grove: Go to mark " .. i })
+end
 

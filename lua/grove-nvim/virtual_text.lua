@@ -19,6 +19,12 @@ end
 -- Fetches stats and renders virtual text.
 local function update(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()
+
+  -- Check if buffer is still valid before accessing it
+  if not api.nvim_buf_is_valid(bufnr) then
+    return
+  end
+
   local buf_path = api.nvim_buf_get_name(bufnr)
   if buf_path == '' then return end
 
@@ -46,29 +52,42 @@ local function update(bufnr)
     -- Clean up temp file
     vim.fn.delete(temp_file)
 
+    -- Check if buffer is still valid before processing results
+    if not api.nvim_buf_is_valid(bufnr) then
+      return
+    end
+
     if exit_code ~= 0 then
       vim.notify("Grove: cx stats failed with exit code " .. exit_code, vim.log.levels.DEBUG)
-      api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+      if api.nvim_buf_is_valid(bufnr) then
+        api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+      end
       return
     end
 
     if stdout == "" then
       vim.notify("Grove: cx stats returned empty output", vim.log.levels.DEBUG)
-      api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+      if api.nvim_buf_is_valid(bufnr) then
+        api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+      end
       return
     end
 
     local ok, stats = pcall(vim.json.decode, stdout)
     if not ok then
       vim.notify("Grove: Failed to parse stats JSON: " .. tostring(stats), vim.log.levels.DEBUG)
-      api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+      if api.nvim_buf_is_valid(bufnr) then
+        api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+      end
       return
     end
 
     -- Handle vim.NIL (JSON null) and empty results
     if not stats or stats == vim.NIL then
       vim.notify("Grove: cx stats returned null (no stats available)", vim.log.levels.DEBUG)
-      api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+      if api.nvim_buf_is_valid(bufnr) then
+        api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+      end
       return
     end
 
@@ -79,7 +98,9 @@ local function update(bufnr)
 
     if type(stats) ~= "table" then
       vim.notify("Grove: stats is not a table (got " .. type(stats) .. ")", vim.log.levels.DEBUG)
-      api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+      if api.nvim_buf_is_valid(bufnr) then
+        api.nvim_buf_clear_namespace(bufnr, ns_id, 0, -1)
+      end
       return
     end
 

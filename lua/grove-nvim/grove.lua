@@ -9,6 +9,7 @@ local nb = require('grove-nvim.nb')
 local hooks = require('grove-nvim.hooks')
 local data = require('grove-nvim.data')
 local rules = require('grove-nvim.rules')
+local marks = require('grove-nvim.marks')
 
 local M = {}
 
@@ -56,5 +57,12 @@ M.get_active_plan = data.get_active_plan
 
 -- Rules functions
 M.preview_rule_files = rules.preview_rule_files
+
+-- Marks functions
+M.mark_file = marks.add_file
+M.unmark_file = marks.remove_file
+M.clear_marks = marks.clear
+M.open_marks_menu = marks.open_menu
+M.goto_mark = marks.go_to
 
 return M
