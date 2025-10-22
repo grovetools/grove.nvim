@@ -34,7 +34,7 @@ func runFlowCommand(args ...string) error {
 		return fmt.Errorf("'flow' command not found in PATH. Please ensure the grove-flow binary is installed and accessible")
 	}
 
-	flowCmd := exec.Command("flow", args...)
+	flowCmd := exec.Command("grove", append([]string{"flow"}, args...)...)
 	flowCmd.Stdout = os.Stdout
 	flowCmd.Stderr = os.Stderr
 	flowCmd.Stdin = os.Stdin
