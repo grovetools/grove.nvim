@@ -259,6 +259,92 @@ local function update(bufnr)
   end)
 end
 
+-- Copies the buffer content with virtual text aligned to the right
+function M.copy_rules_with_virtual_text(bufnr)
+  bufnr = bufnr or api.nvim_get_current_buf()
+
+  if not api.nvim_buf_is_valid(bufnr) then
+    vim.notify("Grove: Invalid buffer", vim.log.levels.ERROR)
+    return
+  end
+
+  -- Get all lines from the buffer
+  local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
+
+  -- Calculate the maximum line length for alignment
+  local max_length = 0
+  for _, line in ipairs(lines) do
+    local visible_length = vim.fn.strdisplaywidth(line)
+    if visible_length > max_length then
+      max_length = visible_length
+    end
+  end
+
+  -- Add some padding before virtual text
+  local padding_target = max_length + 4
+
+  local combined_lines = {}
+
+  for line_idx, line_text in ipairs(lines) do
+    local combined = line_text
+
+    -- Get extmarks for this line
+    local extmarks = api.nvim_buf_get_extmarks(
+      bufnr,
+      ns_id,
+      {line_idx - 1, 0},
+      {line_idx - 1, -1},
+      {details = true}
+    )
+
+    -- Extract virtual text if it exists
+    if #extmarks > 0 then
+      for _, extmark in ipairs(extmarks) do
+        local details = extmark[4]
+        if details and details.virt_text then
+          -- Calculate padding needed
+          local line_display_width = vim.fn.strdisplaywidth(line_text)
+          local padding_needed = padding_target - line_display_width
+          if padding_needed < 2 then
+            padding_needed = 2
+          end
+
+          -- Build the virtual text string (without color codes)
+          local virt_text_parts = {}
+          for _, chunk in ipairs(details.virt_text) do
+            table.insert(virt_text_parts, chunk[1])
+          end
+          local virt_text_str = table.concat(virt_text_parts, '')
+
+          -- Combine with padding
+          combined = line_text .. string.rep(' ', padding_needed) .. virt_text_str
+          break
+        end
+      end
+    end
+
+    table.insert(combined_lines, combined)
+  end
+
+  -- Join all lines and copy to clipboard
+  local result = table.concat(combined_lines, '\n')
+  vim.fn.setreg('+', result)
+
+  -- Count how many lines had virtual text
+  local lines_with_vtext = 0
+  for _, line in ipairs(combined_lines) do
+    if line:match('%s+~') or line:match('%s+⚠') or line:match('%s+%-') or line:match('%s+%[') then
+      lines_with_vtext = lines_with_vtext + 1
+    end
+  end
+
+  vim.notify(
+    string.format("Grove: Copied %d lines (%d with virtual text) to clipboard",
+      #combined_lines, lines_with_vtext),
+    vim.log.levels.INFO
+  )
+end
+
 -- Sets up autocommands and highlighting for the current buffer.
 function M.setup(bufnr)
   bufnr = bufnr or api.nvim_get_current_buf()

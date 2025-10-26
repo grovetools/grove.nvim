@@ -136,6 +136,13 @@ end, {
 	desc = "Edit context rules (job-specific if in frontmatter, otherwise .grove/rules)",
 })
 
+vim.api.nvim_create_user_command("GroveCopyRulesWithVirtualText", function()
+	require("grove-nvim.virtual_text").copy_rules_with_virtual_text()
+end, {
+	nargs = 0,
+	desc = "Copy rules file content with virtual text to clipboard",
+})
+
 vim.api.nvim_create_user_command("GroveRules", function()
 	require("grove-nvim.cx").rules()
 end, {
