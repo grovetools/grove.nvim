@@ -198,13 +198,19 @@ local function update(bufnr)
               -- Has matches
               table.insert(virt_text, { ' ~' .. format_compact(stat.totalTokens) .. ' tokens', 'GroveVirtualTextTokens' })
 
-              local path_text
               if stat.fileCount == 1 and stat.resolvedPaths and #stat.resolvedPaths > 0 then
-                path_text = ' (' .. vim.fn.fnamemodify(stat.resolvedPaths[1], ':t') .. ')'
+                -- Only show the filename if the rule itself is a glob.
+                -- If the rule is 'package.json', showing '(package.json)' is redundant.
+                local is_glob_rule = stat.rule and (stat.rule:find('*') or stat.rule:find('?') or stat.rule:find('{') or stat.rule:find('%['))
+                if is_glob_rule then
+                  local path_text = ' (' .. vim.fn.fnamemodify(stat.resolvedPaths[1], ':t') .. ')'
+                  table.insert(virt_text, { path_text, 'GroveVirtualTextPath' })
+                end
               else
-                path_text = ' (' .. stat.fileCount .. ' files)'
+                -- Show file count for rules matching multiple files.
+                local path_text = ' (' .. stat.fileCount .. ' files)'
+                table.insert(virt_text, { path_text, 'GroveVirtualTextPath' })
               end
-              table.insert(virt_text, { path_text, 'GroveVirtualTextPath' })
 
               -- Show filtered files info (files that matched base pattern but were filtered by directive)
               if stat.filteredByLine and #stat.filteredByLine > 0 then

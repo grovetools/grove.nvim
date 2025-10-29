@@ -41,6 +41,10 @@ syntax match groveRulesRulesetImport "^\s*@\(alias\|a\):\s*\S\+::\S\+\s*$" conta
 " This captures workspace like "grove-core" in "@alias:grove-core/pkg/**"
 syntax match groveRulesAliasWorkspace "^\s*@\(alias\|a\):\s*\zs[^/:]\+\ze/" contained
 
+" A version of groveRulesAliasWorkspace for use inside other directives (like @view)
+" It uses a look-behind to find the alias keyword instead of being anchored to the line start.
+syntax match groveRulesContainedAliasWorkspace "\(@\(alias\|a\):\s*\)\@<=[^/:]\+" contained
+
 " Alias pattern (full line for regular aliases, not ruleset imports)
 " Uses negative lookahead to exclude lines containing ::
 " Uses \ze to stop before whitespace to allow inline directives like @find:
@@ -58,7 +62,7 @@ syntax match groveRulesAliasDirective "^\s*@\(alias\|a\):" contained
 syntax match groveRulesViewDirective "^\s*@\(view\|v\):" contained
 
 " Alias after @view: directive (e.g., @view: @a:project)
-syntax match groveRulesViewAliasValue "@\(alias\|a\):\s*\zs\S\+\ze\(\s\|$\)" contained contains=groveRulesAliasWorkspace
+syntax match groveRulesViewAliasValue "@\(alias\|a\):\s*\zs\S\+\ze\(\s\|$\)" contained contains=groveRulesContainedAliasWorkspace
 
 " Full view line with alias
 syntax match groveRulesViewLine "^\s*@\(view\|v\):\s\+@\(alias\|a\):\S\+.*$" contains=groveRulesViewDirective,groveRulesViewAliasDirective,groveRulesViewAliasValue,groveRulesInlineSearch
@@ -95,6 +99,7 @@ highlight default link groveRulesGitUrl       String
 highlight default link groveRulesAliasPattern Type
 highlight default link groveRulesAliasValue   Type
 highlight default link groveRulesAliasWorkspace Identifier
+highlight default link groveRulesContainedAliasWorkspace Identifier
 highlight default link groveRulesAliasDirective Keyword
 highlight default link groveRulesRulesetAlias   Type
 highlight default link groveRulesRulesetImport Type
