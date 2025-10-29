@@ -5,7 +5,7 @@ local M = {}
 local utils = require('grove-nvim.utils')
 
 -- Parse an alias from a rule line
--- Returns: alias_part (e.g., "@a:grove-nvim"), base_path (the resolved absolute path)
+-- Returns: alias_part (e.g., "@a:grove-nvim" or "@a:grove-nvim::default"), base_path (the resolved absolute path)
 local function parse_alias_from_line(line, cx_path)
   -- Check if line contains an alias directive
   local alias_match = line:match("@a:([^/]+)") or line:match("@alias:([^/]+)")
@@ -13,8 +13,15 @@ local function parse_alias_from_line(line, cx_path)
     return nil, nil
   end
 
-  -- Extract just the alias part (e.g., "@a:grove-nvim")
+  -- Extract just the alias part (e.g., "@a:grove-nvim" or "@a:grove-nvim::default")
   local alias_prefix = line:match("(@a:[^/]+)") or line:match("(@alias:[^/]+)")
+
+  -- Check if this is a ruleset import (contains ::)
+  -- Strip the ::ruleset suffix for resolution, but keep the full prefix
+  local alias_for_resolution = alias_match
+  if alias_match:find("::", 1, true) then
+    alias_for_resolution = alias_match:match("^(.*)::") or alias_match
+  end
 
   -- Get the workspace list to find the resolved path
   local handle = io.popen(cx_path .. ' workspace list --json 2>/dev/null')
@@ -36,7 +43,8 @@ local function parse_alias_from_line(line, cx_path)
   end
 
   -- Split alias into components (e.g., "grove-nvim" or "grove-ecosystem:grove-nvim")
-  local alias_parts = vim.split(alias_match, ":")
+  -- Use alias_for_resolution which has ::ruleset stripped
+  local alias_parts = vim.split(alias_for_resolution, ":")
 
   -- Context-aware matching logic (mirrors the Go alias resolver)
   -- Get current working directory to determine context
