@@ -8,13 +8,13 @@ local utils = require('grove-nvim.utils')
 -- Returns: alias_part (e.g., "@a:grove-nvim" or "@a:grove-nvim::default"), base_path (the resolved absolute path)
 local function parse_alias_from_line(line, cx_path)
   -- Check if line contains an alias directive
-  local alias_match = line:match("@a:([^/]+)") or line:match("@alias:([^/]+)")
+  local alias_match = line:match("@a:([^/%s]+)") or line:match("@alias:([^/%s]+)")
   if not alias_match then
     return nil, nil
   end
 
   -- Extract just the alias part (e.g., "@a:grove-nvim" or "@a:grove-nvim::default")
-  local alias_prefix = line:match("(@a:[^/]+)") or line:match("(@alias:[^/]+)")
+  local alias_prefix = line:match("(@a:[^/%s]+)") or line:match("(@alias:[^/%s]+)")
 
   -- Check if this is a ruleset import (contains ::)
   -- Strip the ::ruleset suffix for resolution, but keep the full prefix
