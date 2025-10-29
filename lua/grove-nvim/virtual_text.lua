@@ -217,7 +217,7 @@ local function update(bufnr)
                 local filtered_text = ' +' .. total_filtered .. ' included by line ' .. table.concat(line_refs, ', ')
                 table.insert(virt_text, { filtered_text, 'GroveVirtualTextFiltered' })
               end
-            elseif stat.fileCount == 0 and not stat.gitInfo then
+            elseif stat.fileCount == 0 and not stat.gitInfo and (not stat.excludedFileCount or stat.excludedFileCount == 0) then
               -- Has stats but no matches (for inclusion rules)
               -- Check if there are filtered files that matched another rule
               if stat.filteredByLine and #stat.filteredByLine > 0 then
