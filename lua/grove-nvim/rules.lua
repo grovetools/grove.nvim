@@ -243,8 +243,10 @@ function M.preview_rule_files()
             if alias_prefix and alias_base_path then
               local rel_path = make_relative(file_path, alias_base_path)
               if rel_path ~= file_path then
-                -- Successfully made relative, prepend alias
-                file_path = alias_prefix .. "/" .. rel_path
+                -- Strip ::ruleset suffix from alias_prefix before adding individual file paths
+                -- Individual files use the alias without the ruleset import syntax
+                local alias_without_ruleset = alias_prefix:match("^(.*)::") or alias_prefix
+                file_path = alias_without_ruleset .. "/" .. rel_path
               end
             end
 
