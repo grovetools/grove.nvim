@@ -187,10 +187,12 @@ function M.preview_rule_files()
   local rules_file = vim.api.nvim_buf_get_name(original_buf)
 
   -- Determine if this is a floating pattern that needs context
-  -- Floating patterns are patterns without '/' that aren't aliases
+  -- Floating patterns are patterns without '/' that aren't aliases or directives
   local is_floating_pattern = not rule_to_resolve:match('/')
     and not rule_to_resolve:match('^@a:')
     and not rule_to_resolve:match('^@alias:')
+    and not rule_to_resolve:match('^@view:')
+    and not rule_to_resolve:match('^@v:')
 
   -- Build the resolve command with context only for floating patterns
   local resolve_cmd = { cx_path, 'resolve' }
