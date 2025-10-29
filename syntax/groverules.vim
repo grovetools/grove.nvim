@@ -26,14 +26,16 @@ syntax match groveRulesGitUrl       "^\s*\(git@\|https\?:\/\/\)\S\+"
 syntax match groveRulesRulesetDelimiter "::" contained
 
 " Ruleset name (the part after ::)
-syntax match groveRulesRulesetName "\(::\)\@<=\S\+$" contained
+" Allows trailing whitespace
+syntax match groveRulesRulesetName "\(::\)\@<=\S\+\ze\s*$" contained
 
 " Alias part of a ruleset import (e.g., project in project::ruleset)
 syntax match groveRulesRulesetAlias "@\(alias\|a\):\s*\zs\S\+\ze::" contained
 
 " Ruleset import (project::ruleset pattern)
 " Captures the full @alias:project::ruleset or @a:project::ruleset
-syntax match groveRulesRulesetImport "^\s*@\(alias\|a\):\s*\S\+::\S\+$" contains=groveRulesAliasDirective,groveRulesRulesetAlias,groveRulesRulesetDelimiter,groveRulesRulesetName
+" Allows trailing whitespace
+syntax match groveRulesRulesetImport "^\s*@\(alias\|a\):\s*\S\+::\S\+\s*$" contains=groveRulesAliasDirective,groveRulesRulesetAlias,groveRulesRulesetDelimiter,groveRulesRulesetName
 
 " Alias workspace/repo identifier (the part before / in @alias:)
 " This captures workspace like "grove-core" in "@alias:grove-core/pkg/**"
@@ -41,11 +43,13 @@ syntax match groveRulesAliasWorkspace "^\s*@\(alias\|a\):\s*\zs[^/:]\+\ze/" cont
 
 " Alias pattern (full line for regular aliases, not ruleset imports)
 " Uses negative lookahead to exclude lines containing ::
-syntax match groveRulesAliasPattern "^\s*@\(alias\|a\):\s*\(\S\+::\)\@!\S\+$" contains=groveRulesAliasDirective,groveRulesAliasValue,groveRulesAliasWorkspace
+" Uses \ze to stop before whitespace to allow inline directives like @find:
+syntax match groveRulesAliasPattern "^\s*@\(alias\|a\):\s*\(\S\+::\)\@!\S\+\ze\(\s\|$\)" contains=groveRulesAliasDirective,groveRulesAliasValue,groveRulesAliasWorkspace
 
 " Alias value (the part after @alias: or @a:) - but not ruleset imports
 " Uses \zs to start the match after the prefix.
-syntax match groveRulesAliasValue   "@\(alias\|a\):\s*\zs\S\+$" contained contains=groveRulesAliasWorkspace
+" Stops at whitespace or end of line to allow inline directives
+syntax match groveRulesAliasValue   "@\(alias\|a\):\s*\zs\S\+\ze\(\s\|$\)" contained contains=groveRulesAliasWorkspace
 
 " Alias directive keyword (@alias: or @a:)
 syntax match groveRulesAliasDirective "^\s*@\(alias\|a\):" contained
