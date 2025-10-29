@@ -55,7 +55,16 @@ syntax match groveRulesAliasValue   "@\(alias\|a\):\s*\zs\S\+\ze\(\s\|$\)" conta
 syntax match groveRulesAliasDirective "^\s*@\(alias\|a\):" contained
 
 " View directive keyword (@view: or @v:)
-syntax match groveRulesViewDirective "^\s*@\(view\|v\):"
+syntax match groveRulesViewDirective "^\s*@\(view\|v\):" contained
+
+" Alias after @view: directive (e.g., @view: @a:project)
+syntax match groveRulesViewAliasValue "@\(alias\|a\):\s*\zs\S\+\ze\(\s\|$\)" contained contains=groveRulesAliasWorkspace
+
+" Full view line with alias
+syntax match groveRulesViewLine "^\s*@\(view\|v\):\s\+@\(alias\|a\):\S\+.*$" contains=groveRulesViewDirective,groveRulesViewAliasDirective,groveRulesViewAliasValue,groveRulesInlineSearch
+
+" Alias directive within a @view: line
+syntax match groveRulesViewAliasDirective "@\(alias\|a\):" contained
 
 " Command directive (@cmd:)
 syntax match groveRulesCmdDirective "^\s*@cmd:"
@@ -92,6 +101,9 @@ highlight default link groveRulesRulesetImport Type
 highlight default link groveRulesRulesetDelimiter Operator
 highlight default link groveRulesRulesetName String
 highlight default link groveRulesViewDirective Constant
+highlight default link groveRulesViewAliasDirective Keyword
+highlight default link groveRulesViewAliasValue Type
+highlight default link groveRulesViewLine Normal
 highlight default link groveRulesCmdDirective Keyword
 highlight default link groveRulesDirective    Keyword
 highlight default link groveRulesFindDirective Function

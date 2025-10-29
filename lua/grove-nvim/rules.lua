@@ -221,7 +221,7 @@ function M.preview_rule_files()
         title = title,
         items = items,
         format = "text",
-        layout = utils.centered_dropdown(80, math.min(#items + 4, 30)),
+        layout = utils.centered_dropdown(120, math.min(#items + 4, 30)),
         confirm = function(picker, item)
           -- Get all selected items (or just the current item if none selected)
           local selected = picker:selected()
