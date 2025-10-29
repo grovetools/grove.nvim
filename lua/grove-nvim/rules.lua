@@ -183,13 +183,40 @@ function M.preview_rule_files()
     return
   end
 
-  -- Try to parse alias information from the line (use the rule without ! for parsing)
+  -- Get the current buffer's file path (should be the rules file)
+  local rules_file = vim.api.nvim_buf_get_name(original_buf)
+
+  -- Build the resolve command with context if we have a rules file
+  local resolve_cmd = { cx_path, 'resolve' }
+  if rules_file ~= '' then
+    table.insert(resolve_cmd, '--rules-file')
+    table.insert(resolve_cmd, rules_file)
+    table.insert(resolve_cmd, '--line-number')
+    table.insert(resolve_cmd, tostring(original_line_nr))
+  end
+  table.insert(resolve_cmd, rule_to_resolve)
+
+  -- Try to parse alias information from the current line first
   local alias_prefix, alias_base_path = parse_alias_from_line(rule_to_resolve, cx_path)
+
+  -- If no alias found on current line and we're using context-aware resolution,
+  -- scan backwards through the rules file to find the most recent alias
+  if not alias_prefix and rules_file ~= '' then
+    local lines = vim.api.nvim_buf_get_lines(original_buf, 0, original_line_nr - 1, false)
+    for i = #lines, 1, -1 do
+      local prev_alias_prefix, prev_alias_base_path = parse_alias_from_line(lines[i], cx_path)
+      if prev_alias_prefix then
+        alias_prefix = prev_alias_prefix
+        alias_base_path = prev_alias_base_path
+        break
+      end
+    end
+  end
 
   local msg = is_exclusion and "Grove: Resolving files that would be excluded..." or "Grove: Resolving files for rule..."
   vim.notify(msg, vim.log.levels.INFO)
 
-  utils.run_command({ cx_path, 'resolve', rule_to_resolve }, function(stdout, stderr, exit_code)
+  utils.run_command(resolve_cmd, function(stdout, stderr, exit_code)
     if exit_code ~= 0 then
       vim.notify("Grove: Failed to resolve files: " .. stderr, vim.log.levels.ERROR)
       return
