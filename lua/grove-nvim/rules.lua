@@ -186,9 +186,15 @@ function M.preview_rule_files()
   -- Get the current buffer's file path (should be the rules file)
   local rules_file = vim.api.nvim_buf_get_name(original_buf)
 
-  -- Build the resolve command with context if we have a rules file
+  -- Determine if this is a floating pattern that needs context
+  -- Floating patterns are patterns without '/' that aren't aliases
+  local is_floating_pattern = not rule_to_resolve:match('/')
+    and not rule_to_resolve:match('^@a:')
+    and not rule_to_resolve:match('^@alias:')
+
+  -- Build the resolve command with context only for floating patterns
   local resolve_cmd = { cx_path, 'resolve' }
-  if rules_file ~= '' then
+  if is_floating_pattern and rules_file ~= '' then
     table.insert(resolve_cmd, '--rules-file')
     table.insert(resolve_cmd, rules_file)
     table.insert(resolve_cmd, '--line-number')
@@ -199,9 +205,9 @@ function M.preview_rule_files()
   -- Try to parse alias information from the current line first
   local alias_prefix, alias_base_path = parse_alias_from_line(rule_to_resolve, cx_path)
 
-  -- If no alias found on current line and we're using context-aware resolution,
+  -- If no alias found on current line and this is a floating pattern,
   -- scan backwards through the rules file to find the most recent alias
-  if not alias_prefix and rules_file ~= '' then
+  if not alias_prefix and is_floating_pattern and rules_file ~= '' then
     local lines = vim.api.nvim_buf_get_lines(original_buf, 0, original_line_nr - 1, false)
     for i = #lines, 1, -1 do
       local prev_alias_prefix, prev_alias_base_path = parse_alias_from_line(lines[i], cx_path)
