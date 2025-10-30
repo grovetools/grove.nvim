@@ -8,8 +8,11 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
+	"github.com/mattsolo1/grove-core/config"
+	"github.com/mattsolo1/grove-core/util/pathutil"
 	"github.com/mattsolo1/grove-core/pkg/workspace"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -86,10 +89,66 @@ func newResolveAliasesCmd() *cobra.Command {
 			scanner := bufio.NewScanner(os.Stdin)
 			results := make(map[string]string)
 
+			// --- Start Notebook Alias Generation Logic ---
+			coreCfg, err := config.LoadDefault()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "grove-nvim warning: could not load grove config for notebook aliases: %v\n", err)
+			}
+
+			type processedNotebook struct {
+				Name    string
+				RootDir string
+			}
+			var processedNotebooks []processedNotebook
+			if coreCfg != nil && coreCfg.Notebooks != nil {
+				for name, nbConfig := range coreCfg.Notebooks {
+					if nbConfig.RootDir != "" {
+						expandedRoot, err := pathutil.Expand(nbConfig.RootDir)
+						if err == nil {
+							processedNotebooks = append(processedNotebooks, processedNotebook{Name: name, RootDir: expandedRoot})
+						}
+					}
+				}
+				// Sort by root dir length descending to match the most specific (longest) path first.
+				sort.Slice(processedNotebooks, func(i, j int) bool {
+					return len(processedNotebooks[i].RootDir) > len(processedNotebooks[j].RootDir)
+				})
+			}
+			// --- End Notebook Alias Generation Logic ---
+
 			for scanner.Scan() {
 				path := scanner.Text()
 				if path == "" {
 					continue
+				}
+
+				// Check if this path is inside a notebook root
+				aliasGenerated := false
+				if len(processedNotebooks) > 0 {
+					for _, nb := range processedNotebooks {
+						// Check if the file path is within this notebook's root dir.
+						if strings.HasPrefix(path, nb.RootDir) {
+							// Ensure it's a directory boundary to prevent partial matches (e.g., /path/to/nb vs /path/to/nb-plus).
+							if len(path) == len(nb.RootDir) || (len(path) > len(nb.RootDir) && path[len(nb.RootDir)] == os.PathSeparator) {
+								relPath, err := filepath.Rel(nb.RootDir, path)
+								if err == nil {
+									var alias string
+									// For the "default" notebook, omit the name for a cleaner alias and backward compatibility.
+									if nb.Name == "default" {
+										alias = fmt.Sprintf("@a:nb:%s", filepath.ToSlash(relPath))
+									} else {
+										alias = fmt.Sprintf("@a:nb:%s:%s", nb.Name, filepath.ToSlash(relPath))
+									}
+									results[path] = alias
+									aliasGenerated = true
+									break // Found the best match, stop iterating notebooks.
+								}
+							}
+						}
+					}
+				}
+				if aliasGenerated {
+					continue // Go to the next file path.
 				}
 
 				// Find the most specific workspace containing this path
