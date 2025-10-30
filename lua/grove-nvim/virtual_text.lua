@@ -225,8 +225,39 @@ local function update(bufnr)
               end
             elseif stat.fileCount == 0 and not stat.gitInfo and (not stat.excludedFileCount or stat.excludedFileCount == 0) then
               -- Has stats but no matches (for inclusion rules)
+              -- Check if there's a skip reason first
+              if stat.skipReason and stat.skipReason ~= '' then
+                -- Rule was skipped for a specific reason
+                -- Extract key parts of the message for display
+                local display_reason = stat.skipReason
+                -- Shorten common messages
+                if display_reason:match("is in your 'excluded_workspaces' list") then
+                  local workspace = display_reason:match("workspace '([^']+)'")
+                  if workspace then
+                    display_reason = 'excluded workspace: ' .. workspace
+                  else
+                    display_reason = 'excluded workspace'
+                  end
+                elseif display_reason:match("is outside of any known or allowed workspace") then
+                  -- Try to extract the path for more context
+                  local path = display_reason:match("path '([^']+)'")
+                  if path then
+                    -- Show just the last few path components for brevity
+                    local parts = {}
+                    for part in path:gmatch("[^/]+") do
+                      table.insert(parts, part)
+                    end
+                    local short_path = table.concat({parts[#parts-1] or '', parts[#parts] or ''}, '/')
+                    display_reason = 'outside workspaces: ' .. short_path
+                  else
+                    display_reason = 'outside allowed workspaces'
+                  end
+                elseif display_reason:match("is outside of any workspace defined in 'included_workspaces'") then
+                  display_reason = 'not in included workspaces'
+                end
+                table.insert(virt_text, { ' ⚠ ' .. display_reason, 'GroveVirtualTextSkipped' })
               -- Check if there are filtered files that matched another rule
-              if stat.filteredByLine and #stat.filteredByLine > 0 then
+              elseif stat.filteredByLine and #stat.filteredByLine > 0 then
                 -- Show which lines included the files that would have matched
                 local total_filtered = 0
                 local line_refs = {}
@@ -359,6 +390,7 @@ function M.setup(bufnr)
   vim.cmd('highlight default GroveVirtualTextTokens guifg=#888888 ctermfg=244')
   vim.cmd('highlight default GroveVirtualTextPath guifg=#666666 ctermfg=242')
   vim.cmd('highlight default GroveVirtualTextNoMatch guifg=#e06c75 ctermfg=red')
+  vim.cmd('highlight default GroveVirtualTextSkipped guifg=#d19a66 ctermfg=yellow')
   vim.cmd('highlight default GroveVirtualTextExcluded guifg=#888888 ctermfg=244')
   vim.cmd('highlight default GroveVirtualTextFiltered guifg=#d19a66 ctermfg=yellow')
 
