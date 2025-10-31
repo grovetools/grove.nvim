@@ -228,4 +228,39 @@ function M.run_in_float_term_tui(command, title)
   vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ':q<CR>', { noremap = true, silent = true })
 end
 
+-- Helper to show a list of files in a picker and execute a callback on selection
+function M.show_file_picker(title, files, on_confirm)
+  local has_snacks, snacks = pcall(require, 'snacks')
+  if not (has_snacks and snacks.picker) then
+    vim.notify('Grove: snacks.nvim is required for file selection', vim.log.levels.ERROR)
+    if on_confirm then on_confirm(nil) end
+    return
+  end
+
+  -- Convert file paths to picker items
+  local items = {}
+  for _, file in ipairs(files) do
+    table.insert(items, { text = file })
+  end
+
+  vim.schedule(function()
+    snacks.picker({
+      title = title,
+      items = items,
+      format = "text",
+      layout = M.centered_dropdown(120, math.min(#items + 4, 30)),
+      confirm = function(picker, item)
+        picker:close()
+        if on_confirm then
+          if item and item.text then
+            on_confirm(item.text)
+          else
+            on_confirm(nil)
+          end
+        end
+      end,
+    })
+  end)
+end
+
 return M

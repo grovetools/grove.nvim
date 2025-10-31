@@ -312,4 +312,51 @@ function M.preview_rule_files()
   end)
 end
 
+---@async
+function M.goto_file_from_rule()
+  -- Get the file path or alias under the cursor, like the built-in 'gf'
+  local file_under_cursor = vim.fn.expand('<cfile>')
+  if file_under_cursor == '' then
+    vim.notify("Grove: No file or alias under cursor.", vim.log.levels.INFO)
+    return
+  end
+
+  local cx_path = vim.fn.exepath('cx')
+  if cx_path == '' then
+    vim.notify("Grove: cx executable not found in PATH.", vim.log.levels.ERROR)
+    return
+  end
+
+  vim.notify("Grove: Resolving '" .. file_under_cursor .. "'...", vim.log.levels.INFO)
+
+  -- Use cx resolve to get the file path(s)
+  local resolve_cmd = { cx_path, 'resolve', file_under_cursor }
+  utils.run_command(resolve_cmd, function(stdout, stderr, exit_code)
+    if exit_code ~= 0 then
+      vim.notify("Grove: Failed to resolve path: " .. stderr, vim.log.levels.ERROR)
+      return
+    end
+
+    local files = vim.split(stdout, '\n', { trimempty = true })
+
+    vim.schedule(function()
+      if #files == 0 then
+        vim.notify("Grove: No files found for this rule.", vim.log.levels.INFO)
+      elseif #files == 1 then
+        -- Only one file found, open it directly
+        vim.cmd('edit ' .. vim.fn.fnameescape(files[1]))
+      else
+        -- Multiple files found, show a picker
+        utils.show_file_picker("Select file to open", files, function(selected_file)
+          if selected_file then
+            vim.schedule(function()
+              vim.cmd('edit ' .. vim.fn.fnameescape(selected_file))
+            end)
+          end
+        end)
+      end
+    end)
+  end)
+end
+
 return M

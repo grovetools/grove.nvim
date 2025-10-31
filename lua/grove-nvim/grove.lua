@@ -57,6 +57,7 @@ M.get_active_plan = data.get_active_plan
 
 -- Rules functions
 M.preview_rule_files = rules.preview_rule_files
+M.goto_file_from_rule = rules.goto_file_from_rule
 
 -- Marks functions
 M.mark_file = marks.add_file
