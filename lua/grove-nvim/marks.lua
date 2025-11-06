@@ -51,10 +51,55 @@ local function write_marks()
 	vim.fn.writefile(lines, marks_path)
 end
 
---- Synchronizes the contents of .grove/marks into .grove/rules using aliases.
+--- Gets the active rules file path by checking state, falling back to .grove/rules
+local function get_active_rules_path()
+	local cwd = vim.fn.getcwd()
+
+	-- Search for .grove/state file walking up from cwd
+	local search_dir = cwd
+	local state_file = nil
+	local project_root = nil
+	local max_depth = 10
+	local depth = 0
+
+	while depth < max_depth do
+		local candidate = search_dir .. '/.grove/state'
+		if vim.fn.filereadable(candidate) == 1 then
+			state_file = candidate
+			project_root = search_dir
+			break
+		end
+
+		local parent = vim.fn.fnamemodify(search_dir, ':h')
+		if parent == search_dir then
+			break -- Reached root
+		end
+		search_dir = parent
+		depth = depth + 1
+	end
+
+	-- If we found a state file, check for active_rules_source
+	if state_file and project_root then
+		local state_lines = vim.fn.readfile(state_file)
+		for _, line in ipairs(state_lines) do
+			local source = line:match('context%.active_rules_source:%s*"?([^"]+)"?')
+			if source then
+				local rules_path = project_root .. '/' .. source
+				if vim.fn.filereadable(rules_path) == 1 then
+					return rules_path
+				end
+			end
+		end
+	end
+
+	-- Fall back to default .grove/rules
+	return cwd .. "/" .. RULES_FILE
+end
+
+--- Synchronizes the contents of .grove/marks into the active rules file using aliases.
 function M.sync_marks_to_rules()
 	read_marks()
-	local rules_path = vim.fn.getcwd() .. "/" .. RULES_FILE
+	local rules_path = get_active_rules_path()
 
 	-- Read existing rules, creating the file if it doesn't exist.
 	local rules_lines = {}
@@ -117,6 +162,15 @@ function M.sync_marks_to_rules()
 		table.insert(new_rules_lines, MARKS_MARKER_END)
 
 		vim.fn.writefile(new_rules_lines, rules_path)
+
+		-- Show which rules file was updated
+		local rules_name = vim.fn.fnamemodify(rules_path, ':t')
+		local rules_dir = vim.fn.fnamemodify(rules_path, ':h:t')
+		vim.notify(
+			string.format("Grove: Synced marks to %s/%s", rules_dir, rules_name),
+			vim.log.levels.DEBUG
+		)
+
 		vim.api.nvim_exec_autocmds("User", { pattern = "GroveMarksChanged" })
 	end)
 end
