@@ -46,6 +46,7 @@ M.open_config_analyze_tui = meta.config_analyze_tui
 
 -- Notebook functions
 M.open_nb_manage = nb.manage
+M.open_nb_browse = nb.browse
 
 -- Hooks functions
 M.open_hooks_sessions_browse = hooks.sessions_browse

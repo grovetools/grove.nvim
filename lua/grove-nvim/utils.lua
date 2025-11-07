@@ -228,6 +228,119 @@ function M.run_in_float_term_tui(command, title)
   vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ':q<CR>', { noremap = true, silent = true })
 end
 
+-- Helper to run a command in a side terminal (vertical split)
+function M.run_in_side_term_tui(command, title, width)
+  -- Default to 1/3 of screen width if not specified
+  width = width or math.floor(vim.o.columns / 3)
+
+  -- Store the original window to return focus later
+  local original_win = vim.api.nvim_get_current_win()
+
+  -- Create a vertical split on the left
+  vim.cmd('topleft vnew')
+  local win = vim.api.nvim_get_current_win()
+  local buf = vim.api.nvim_get_current_buf()
+
+  -- Resize the new window
+  vim.api.nvim_win_set_width(win, width)
+
+  -- Variables for file watching
+  local timer
+  local temp_file
+
+  -- Generate a unique session ID for this TUI instance
+  local session_id = string.format('%d-%d', vim.fn.getpid(), math.random(10000, 99999))
+  temp_file = string.format('%s/grove-nb-edit-%s', os.getenv('TMPDIR') and os.getenv('TMPDIR'):gsub('/$', '') or '/tmp', session_id)
+
+  -- Open terminal with proper environment for TUI
+  local job_id = vim.fn.termopen(command, {
+    env = {
+      TERM = 'xterm-256color',
+      COLORTERM = 'truecolor',
+      GROVE_NVIM_PLUGIN = 'true', -- Signal to TUI it's running inside nvim
+      GROVE_NVIM_SESSION_ID = session_id, -- Pass session ID to TUI
+    },
+    on_exit = function()
+      vim.schedule(function()
+        -- Stop the file watcher timer
+        if timer then
+          timer:stop()
+          timer:close()
+        end
+
+        -- Clean up temp file
+        if temp_file and vim.loop.fs_stat(temp_file) then
+          vim.loop.fs_unlink(temp_file)
+        end
+
+        -- Close the terminal window and buffer when TUI exits
+        if vim.api.nvim_win_is_valid(win) then vim.api.nvim_win_close(win, true) end
+        if vim.api.nvim_buf_is_valid(buf) then vim.api.nvim_buf_delete(buf, {force = true}) end
+
+        -- Return focus to the original window
+        if vim.api.nvim_win_is_valid(original_win) then
+          vim.api.nvim_set_current_win(original_win)
+        end
+      end)
+    end
+  })
+
+  vim.notify("Grove: Watching for file at " .. temp_file, vim.log.levels.INFO)
+
+  -- Watch the temp file for changes
+  timer = vim.loop.new_timer()
+  local last_mtime = nil
+
+  timer:start(100, 100, vim.schedule_wrap(function()
+    local stat = vim.loop.fs_stat(temp_file)
+    if stat and (not last_mtime or stat.mtime.sec > last_mtime) then
+      last_mtime = stat.mtime.sec
+
+      -- Read the file
+      local file = io.open(temp_file, 'r')
+      if file then
+        local file_to_edit = file:read('*l')
+        file:close()
+
+        if file_to_edit and file_to_edit ~= '' then
+          -- Return focus to the original window
+          if vim.api.nvim_win_is_valid(original_win) then
+            vim.api.nvim_set_current_win(original_win)
+          end
+
+          vim.notify("Grove: Opening " .. vim.fn.fnamemodify(file_to_edit, ':t'), vim.log.levels.INFO)
+          vim.cmd('edit ' .. vim.fn.fnameescape(file_to_edit))
+
+          -- Return focus back to TUI window
+          if vim.api.nvim_win_is_valid(win) then
+            vim.api.nvim_set_current_win(win)
+          end
+
+          -- Clear the file contents
+          os.remove(temp_file)
+        end
+      end
+    end
+  end))
+
+  -- Enter terminal mode
+  vim.cmd('startinsert')
+
+  -- Set buffer-local options for clean rendering
+  vim.bo[buf].buflisted = false
+  vim.wo[win].number = false
+  vim.wo[win].relativenumber = false
+  vim.wo[win].signcolumn = 'no'
+  vim.wo[win].foldcolumn = '0'
+  vim.wo[win].scrolloff = 0
+  vim.wo[win].sidescrolloff = 0
+
+  -- Set up keymaps for the side window
+  vim.api.nvim_buf_set_keymap(buf, 't', '<Esc>', '<C-\\><C-n>:q<CR>', { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', ':q<CR>', { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ':q<CR>', { noremap = true, silent = true })
+end
+
 -- Helper to show a list of files in a picker and execute a callback on selection
 function M.show_file_picker(title, files, on_confirm)
   local has_snacks, snacks = pcall(require, 'snacks')
