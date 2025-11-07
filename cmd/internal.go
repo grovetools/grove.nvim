@@ -36,11 +36,21 @@ func findWorkspaceByPath(provider *workspace.Provider, path string, discoveryRes
 	var bestMatchPath string
 	var bestMatchLen int
 
+	normalizedPath, err := pathutil.NormalizeForLookup(path)
+	if err != nil {
+		normalizedPath = path
+	}
+
 	for _, proj := range discoveryResult.Projects {
 		for _, ws := range proj.Workspaces {
-			// Case-insensitive prefix check
+			normalizedWsPath, err := pathutil.NormalizeForLookup(ws.Path)
+			if err != nil {
+				normalizedWsPath = ws.Path
+			}
+
+			// Normalized prefix check
 			if len(ws.Path) > bestMatchLen &&
-				strings.HasPrefix(strings.ToLower(path), strings.ToLower(ws.Path)) {
+				strings.HasPrefix(normalizedPath, normalizedWsPath) {
 				// Verify it's a directory boundary
 				if len(path) == len(ws.Path) || (len(path) > len(ws.Path) && path[len(ws.Path)] == '/') {
 					bestMatchPath = ws.Path
@@ -157,22 +167,24 @@ func newResolveAliasesCmd() *cobra.Command {
 
 				if node != nil {
 					// Found a containing workspace, create the alias
-					// On case-insensitive filesystems, we need to use normalized paths for Rel
-					// to work correctly when there are case differences
-					basePathNormalized := node.Path
-					filePathNormalized := path
-
-					// On macOS/Windows, ensure both paths use the same case by keeping the workspace path case
-					// and adjusting the file path to match
-					if runtime.GOOS == "darwin" || runtime.GOOS == "windows" {
-						// If the lowercased paths match on the prefix, use the workspace's actual case
-						if strings.HasPrefix(strings.ToLower(path), strings.ToLower(node.Path)) {
-							// Replace the matching prefix with the workspace's case
-							filePathNormalized = node.Path + path[len(node.Path):]
-						}
+					// On case-insensitive filesystems, normalize paths for consistent comparison
+					basePathNormalized, err := pathutil.NormalizeForLookup(node.Path)
+					if err != nil {
+						basePathNormalized = node.Path
+					}
+					filePathNormalized, err := pathutil.NormalizeForLookup(path)
+					if err != nil {
+						filePathNormalized = path
 					}
 
-					relativePath, err := filepath.Rel(basePathNormalized, filePathNormalized)
+					// If paths match on the normalized prefix, use the workspace's actual case
+					// to maintain consistency
+					if strings.HasPrefix(filePathNormalized, basePathNormalized) {
+						// Replace the matching prefix with the workspace's case
+						filePathNormalized = node.Path + path[len(node.Path):]
+					}
+
+					relativePath, err := filepath.Rel(node.Path, filePathNormalized)
 					if err != nil {
 						// Fallback to absolute path on error
 						results[path] = path
