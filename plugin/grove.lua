@@ -107,13 +107,6 @@ end, {
 	desc = "Open Grove Config Analyze TUI (grove config analyze --tui).",
 })
 
-vim.api.nvim_create_user_command("GroveNBManage", function()
-	require("grove-nvim.grove").open_nb_manage()
-end, {
-	nargs = 0,
-	desc = "Open NB Manage TUI (nb manage).",
-})
-
 vim.api.nvim_create_user_command("GroveNBBrowse", function()
 	require("grove-nvim.grove").open_nb_browse()
 end, {
@@ -214,7 +207,6 @@ vim.keymap.set("n", "<leader>fh", "<cmd>GroveHooksSessions<CR>", { desc = "Grove
 vim.keymap.set("n", "<leader>fv", "<cmd>GroveContextView<CR>", { desc = "Grove Context View" })
 vim.keymap.set("n", "<leader>fw", "<cmd>GroveWorkspaceStatus<CR>", { desc = "Grove Workspace Status" })
 vim.keymap.set("n", "<leader>fl", "<cmd>GroveLogsTUI<CR>", { desc = "Grove Logs TUI" })
-vim.keymap.set("n", "<leader>fn", "<cmd>GroveNBManage<CR>", { desc = "NB Manage" })
 vim.keymap.set("n", "<leader>fb", "<cmd>GroveNBBrowse<CR>", { desc = "NB Browse" })
 vim.keymap.set("n", "<leader>frl", "<cmd>GroveReleaseTUI<CR>", { desc = "Grove Release TUI" })
 vim.keymap.set("n", "<leader>jn", "<cmd>GroveAddJob<CR>", { desc = "Grove Add Job (New)" })
