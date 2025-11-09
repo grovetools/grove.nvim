@@ -303,17 +303,29 @@ function M.run_in_side_term_tui(command, title, width)
         file:close()
 
         if file_to_edit and file_to_edit ~= '' then
+          -- Check if this is a preview or open action
+          local action = 'OPEN'
+          local file_path = file_to_edit
+          if file_to_edit:match('^PREVIEW:') then
+            action = 'PREVIEW'
+            file_path = file_to_edit:match('^PREVIEW:(.+)$')
+          elseif file_to_edit:match('^OPEN:') then
+            file_path = file_to_edit:match('^OPEN:(.+)$')
+          end
+
           -- Return focus to the original window
           if vim.api.nvim_win_is_valid(original_win) then
             vim.api.nvim_set_current_win(original_win)
           end
 
-          vim.notify("Grove: Opening " .. vim.fn.fnamemodify(file_to_edit, ':t'), vim.log.levels.INFO)
-          vim.cmd('edit ' .. vim.fn.fnameescape(file_to_edit))
+          vim.notify("Grove: Opening " .. vim.fn.fnamemodify(file_path, ':t'), vim.log.levels.INFO)
+          vim.cmd('edit ' .. vim.fn.fnameescape(file_path))
 
-          -- Return focus back to TUI window
-          if vim.api.nvim_win_is_valid(win) then
-            vim.api.nvim_set_current_win(win)
+          -- For preview mode, return focus to TUI; for open, stay on buffer
+          if action == 'PREVIEW' then
+            if vim.api.nvim_win_is_valid(win) then
+              vim.api.nvim_set_current_win(win)
+            end
           end
 
           -- Clear the file contents
@@ -339,6 +351,22 @@ function M.run_in_side_term_tui(command, title, width)
   vim.api.nvim_buf_set_keymap(buf, 't', '<Esc>', '<C-\\><C-n>:q<CR>', { noremap = true, silent = true })
   vim.api.nvim_buf_set_keymap(buf, 'n', '<Esc>', ':q<CR>', { noremap = true, silent = true })
   vim.api.nvim_buf_set_keymap(buf, 'n', 'q', ':q<CR>', { noremap = true, silent = true })
+
+  -- Add window navigation keymaps in terminal mode
+  vim.api.nvim_buf_set_keymap(buf, 't', '<C-h>', '<C-\\><C-n><C-w>h', { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(buf, 't', '<C-j>', '<C-\\><C-n><C-w>j', { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(buf, 't', '<C-k>', '<C-\\><C-n><C-w>k', { noremap = true, silent = true })
+  vim.api.nvim_buf_set_keymap(buf, 't', '<C-l>', '<C-\\><C-n><C-w>l', { noremap = true, silent = true })
+
+  -- Automatically enter terminal mode when focusing this terminal buffer
+  vim.api.nvim_create_autocmd({'BufEnter', 'WinEnter'}, {
+    buffer = buf,
+    callback = function()
+      if vim.api.nvim_get_current_buf() == buf and vim.bo[buf].buftype == 'terminal' then
+        vim.cmd('startinsert')
+      end
+    end
+  })
 end
 
 -- Helper to show a list of files in a picker and execute a callback on selection
