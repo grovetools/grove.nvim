@@ -110,8 +110,8 @@ func newResolveAliasesCmd() *cobra.Command {
 				RootDir string
 			}
 			var processedNotebooks []processedNotebook
-			if coreCfg != nil && coreCfg.Notebooks != nil {
-				for name, nbConfig := range coreCfg.Notebooks {
+			if coreCfg != nil && coreCfg.Notebooks != nil && coreCfg.Notebooks.Definitions != nil {
+				for name, nbConfig := range coreCfg.Notebooks.Definitions {
 					if nbConfig.RootDir != "" {
 						expandedRoot, err := pathutil.Expand(nbConfig.RootDir)
 						if err == nil {
