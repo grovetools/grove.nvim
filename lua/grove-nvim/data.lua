@@ -182,4 +182,37 @@ function M.get_active_plan()
   return nil
 end
 
+-- Get git repository shorthands for completion
+function M.get_git_repo_shorthands(callback)
+  local cx_path = vim.fn.exepath('cx')
+  if cx_path == '' then
+    callback({})
+    return
+  end
+
+  utils.run_command({ cx_path, 'repo', 'list', '--json' }, function(stdout, stderr, exit_code)
+    if exit_code ~= 0 or stdout == "" then
+      callback({})
+      return
+    end
+
+    -- Parse JSON output
+    local ok, repos = pcall(vim.json.decode, stdout)
+    if not ok or not repos then
+      callback({})
+      return
+    end
+
+    -- Extract shorthands from the shorthand field
+    local shorthands = {}
+    for _, repo in ipairs(repos) do
+      if repo.shorthand and repo.shorthand ~= "" then
+        table.insert(shorthands, repo.shorthand)
+      end
+    end
+
+    callback(shorthands)
+  end)
+end
+
 return M

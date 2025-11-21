@@ -6,6 +6,7 @@
 local source = {}
 
 local utils = require('grove-nvim.utils')
+local data = require('grove-nvim.data')
 
 function source.new(opts)
   local self = setmetatable({}, { __index = source })
@@ -41,6 +42,30 @@ function source:get_completions(ctx, callback)
 
   -- Extract what's been typed after @a: or @alias:
   local after_directive = line_to_cursor:match("@a:([^%s]*)$") or line_to_cursor:match("@alias:([^%s]*)$") or ""
+
+  -- Check if this is a git alias (starts with "git:")
+  local git_prefix = after_directive:match("^git:")
+  if git_prefix then
+    -- Handle git repository completion
+    data.get_git_repo_shorthands(function(shorthands)
+      local items = {}
+      for _, shorthand in ipairs(shorthands) do
+        table.insert(items, {
+          label = shorthand,
+          insertText = shorthand,
+          detail = "Git Repository",
+          kind = vim.lsp.protocol.CompletionItemKind.Folder,
+        })
+      end
+
+      callback({
+        items = items,
+        is_incomplete_backward = false,
+        is_incomplete_forward = false,
+      })
+    end)
+    return
+  end
 
   -- Check if this is a ruleset import (contains ::)
   local is_ruleset_import = after_directive:find("::", 1, true) ~= nil
