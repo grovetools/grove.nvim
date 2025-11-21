@@ -93,13 +93,14 @@ end
 
 -- Get dependencies helper function
 function M.get_dependencies(plan_path, callback)
-  local neogrove_path = vim.fn.exepath('neogrove')
-  if neogrove_path == '' then
+  -- Use flow directly instead of neogrove as it has the --format flag
+  local flow_path = vim.fn.exepath('flow')
+  if flow_path == '' then
     callback({})
     return
   end
 
-  local cmd_args = { neogrove_path, 'plan', 'status', plan_path, '--json' }
+  local cmd_args = { flow_path, 'plan', 'status', plan_path, '--format', 'json' }
   utils.run_command(cmd_args, function(stdout, stderr, exit_code)
     if exit_code ~= 0 or stdout == "" then
       callback({})
