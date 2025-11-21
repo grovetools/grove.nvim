@@ -8,6 +8,13 @@ end, {
 	desc = "Run Grove chat on the current note. Args: [silent] [vertical|horizontal|fullscreen]",
 })
 
+vim.api.nvim_create_user_command("GroveToggleChatUI", function()
+	require("grove-nvim.chat_ui").toggle()
+end, {
+	nargs = 0,
+	desc = "Toggle the Grove Chat UI display for the current buffer.",
+})
+
 -- Plan Commands
 vim.api.nvim_create_user_command("GrovePlan", function()
 	require("grove-nvim.grove").picker()
@@ -194,6 +201,7 @@ vim.keymap.set("n", "<leader>fpx", "<cmd>GrovePlanExtract<CR>", { desc = "Grove 
 vim.keymap.set("n", "<leader>fpp", "<cmd>GrovePlan<CR>", { desc = "Grove Plans (Picker)" })
 vim.keymap.set("n", "<leader>fpl", "<cmd>GroveWorkspacePlansList<CR>", { desc = "Grove Workspace Plans List" })
 vim.keymap.set("n", "<leader>fc", "<cmd>GroveChatRun<CR>", { desc = "Grove Chat Run" })
+vim.keymap.set("n", "<leader>fcd", "<cmd>GroveToggleChatUI<CR>", { desc = "Grove Chat: Toggle Display" })
 vim.keymap.set("n", "<leader>fC", "<cmd>GroveConfigAnalyzeTUI<CR>", { desc = "Grove Config Analyze TUI" })
 vim.keymap.set("n", "<leader>fe", "<cmd>GroveEditContext<CR>", { desc = "Grove Edit Context Rules" })
 vim.keymap.set("n", "<leader>fR", "<cmd>GroveRules<CR>", { desc = "Grove Rules Selector" })
