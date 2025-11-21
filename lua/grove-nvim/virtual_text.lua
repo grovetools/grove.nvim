@@ -156,31 +156,63 @@ local function update(bufnr)
 					if stat then
 						-- First check if this has Git info - if so, show it
 						if stat.gitInfo then
-							-- Display Git repository information
-							-- Status indicator with color
-							if stat.gitInfo.status then
-								local status = stat.gitInfo.status
-								local status_hl = "GroveVirtualTextGitStatus"
-								if status == "audited" or status == "approved" then
-									status_hl = "GroveVirtualTextGitApproved"
-								elseif status == "not_audited" then
-									status_hl = "GroveVirtualTextGitNotAudited"
+							-- Check for git resolution errors first
+							if stat.skipReason and stat.skipReason:match("^invalid git ref:") then
+								-- Extract the version that couldn't be resolved
+								local version = stat.skipReason:match("could not resolve version '([^']*)'")
+								local display_reason
+								if version then
+									display_reason = "invalid git ref: '" .. version .. "'"
+								else
+									display_reason = "invalid git ref"
 								end
-								table.insert(virt_text, { " [" .. status, status_hl })
-							end
+								table.insert(virt_text, { " ⚠ " .. display_reason, "GroveVirtualTextSkipped" })
+							else
+								-- Display Git repository information
+								-- Only show brackets if there's something to display
+								local has_git_content = stat.gitInfo.status
+									or (stat.gitInfo.version and stat.gitInfo.version ~= "")
+									or stat.gitInfo.commit
 
-							-- Version
-							if stat.gitInfo.version and stat.gitInfo.version ~= "" then
-								table.insert(virt_text, { " | " .. stat.gitInfo.version, "GroveVirtualTextGitVersion" })
-							end
+								if has_git_content then
+									table.insert(virt_text, { " [", "GroveVirtualTextGitStatus" })
 
-							-- Commit
-							if stat.gitInfo.commit then
-								table.insert(virt_text, { " | " .. stat.gitInfo.commit, "GroveVirtualTextGitCommit" })
-							end
+									local need_separator = false
 
-							-- Close bracket
-							table.insert(virt_text, { "]", "GroveVirtualTextGitStatus" })
+									-- Status indicator with color
+									if stat.gitInfo.status then
+										local status = stat.gitInfo.status
+										local status_hl = "GroveVirtualTextGitStatus"
+										if status == "audited" or status == "approved" then
+											status_hl = "GroveVirtualTextGitApproved"
+										elseif status == "not_audited" then
+											status_hl = "GroveVirtualTextGitNotAudited"
+										end
+										table.insert(virt_text, { status, status_hl })
+										need_separator = true
+									end
+
+									-- Version
+									if stat.gitInfo.version and stat.gitInfo.version ~= "" then
+										if need_separator then
+											table.insert(virt_text, { " | ", "GroveVirtualTextGitStatus" })
+										end
+										table.insert(virt_text, { stat.gitInfo.version, "GroveVirtualTextGitVersion" })
+										need_separator = true
+									end
+
+									-- Commit
+									if stat.gitInfo.commit then
+										if need_separator then
+											table.insert(virt_text, { " | ", "GroveVirtualTextGitStatus" })
+										end
+										table.insert(virt_text, { stat.gitInfo.commit, "GroveVirtualTextGitCommit" })
+									end
+
+									-- Close bracket
+									table.insert(virt_text, { "]", "GroveVirtualTextGitStatus" })
+								end
+							end
 						end
 
 						-- Now show file/token counts (works for both git repos and regular patterns)
@@ -260,7 +292,15 @@ local function update(bufnr)
 								-- Extract key parts of the message for display
 								local display_reason = stat.skipReason
 								-- Shorten common messages
-								if display_reason:match("is in your 'excluded_workspaces' list") then
+								if display_reason:match("^invalid git ref:") then
+									-- Extract the version that couldn't be resolved
+									local version = display_reason:match("could not resolve version '([^']*)'")
+									if version then
+										display_reason = "invalid git ref: '" .. version .. "'"
+									else
+										display_reason = "invalid git ref"
+									end
+								elseif display_reason:match("is in your 'excluded_workspaces' list") then
 									local workspace = display_reason:match("workspace '([^']+)'")
 									if workspace then
 										display_reason = "excluded workspace: " .. workspace
