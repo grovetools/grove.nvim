@@ -7,6 +7,18 @@ local state = {
   buf = nil,
 }
 
+-- Helper to calculate row position accounting for statusline
+local function calculate_row(position)
+  if position == 'top' then
+    return 0
+  end
+
+  -- For bottom: check if lualine or statusline is enabled
+  local has_statusline = vim.o.laststatus > 0
+  local offset = has_statusline and 2 or 1
+  return vim.o.lines - 1 - offset
+end
+
 local function get_bar_content()
   local parts = {}
   local p_state = provider.state
@@ -54,8 +66,7 @@ local function do_refresh()
 
   -- Update window size based on content
   local opts = config.options.ui.status_bar
-  local height = 1
-  local row = opts.position == 'top' and 0 or (vim.o.lines - height - 1)
+  local row = calculate_row(opts.position)
   local width = math.max(#content + 2, 10)  -- Minimum width of 10
   local col = math.max(0, vim.o.columns - width)
 
@@ -122,13 +133,13 @@ function M.show()
   vim.api.nvim_buf_set_option(state.buf, "modifiable", false)
 
   local opts = config.options.ui.status_bar
-  local height = 1
-  local row = opts.position == 'top' and 0 or (vim.o.lines - height - 1)
+  local row = calculate_row(opts.position)
 
   -- Calculate width and column based on content
   local content = get_bar_content()
   local width = math.max(#content + 2, 10)  -- Minimum width of 10
   local col = math.max(0, vim.o.columns - width)
+  local height = 1
 
   state.win = vim.api.nvim_open_win(state.buf, false, {
     relative = 'editor',
@@ -149,14 +160,14 @@ function M.show()
     callback = function()
       if state.win and vim.api.nvim_win_is_valid(state.win) then
         local new_opts = config.options.ui.status_bar
-        local new_row = new_opts.position == 'top' and 0 or (vim.o.lines - height - 1)
+        local new_row = calculate_row(new_opts.position)
         local new_content = get_bar_content()
         local new_width = math.max(#new_content + 2, 10)
         local new_col = math.max(0, vim.o.columns - new_width)
         vim.api.nvim_win_set_config(state.win, {
           relative = 'editor',
           width = new_width,
-          height = height,
+          height = 1,
           row = new_row,
           col = new_col,
         })
