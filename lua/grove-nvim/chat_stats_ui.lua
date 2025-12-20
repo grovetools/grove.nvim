@@ -106,6 +106,23 @@ local function update(bufnr)
 				virt_text = virt_text,
 				virt_text_pos = "eol",
 			})
+
+			-- Check if this is a new/empty chat (no content after the directive)
+			local has_content_after_directive = false
+			for i = last_user_turn_line_nr + 1, #lines do
+				if lines[i]:match("%S") then -- Check for non-whitespace
+					has_content_after_directive = true
+					break
+				end
+			end
+
+			-- Add a helpful prompt if there's no content yet
+			if not has_content_after_directive then
+				api.nvim_buf_set_extmark(bufnr, ns_id, last_user_turn_line_nr, 0, {
+					virt_lines = { { { "Start typing your question here...", "Comment" } } },
+					virt_lines_above = false,
+				})
+			end
 		end)
 	end)
 end
