@@ -362,6 +362,76 @@ function M.context_size_component()
   }
 end
 
+--- Get active rules file for statusline integration
+--- @return string Rules file name
+function M.rules_file()
+  -- Return cached value if available and recent (cache for 5 seconds)
+  local cache_duration = 5000 -- milliseconds
+  local now = vim.loop.hrtime() / 1000000
+
+  if vim.g.grove_rules_file_cache and vim.g.grove_rules_file_cache_time then
+    if (now - vim.g.grove_rules_file_cache_time) < cache_duration then
+      return vim.g.grove_rules_file_cache
+    end
+  end
+
+  return vim.g.grove_rules_file_cache or ''
+end
+
+--- Update rules file cache (called periodically)
+local function update_rules_file()
+  local cx_path = vim.fn.exepath("cx")
+  if cx_path == "" then
+    return
+  end
+
+  -- Run cx view to get active rules file
+  vim.fn.jobstart({ cx_path, "view" }, {
+    stdout_buffered = true,
+    on_stdout = function(_, data)
+      if data then
+        local stdout = table.concat(data, "\n")
+        -- Parse the output to find "Active rules: <path>"
+        local active_rules = stdout:match("Active rules:%s*(.-)%s*\n")
+        if active_rules then
+          -- Extract just the filename
+          local filename = active_rules:match("([^/]+)$")
+          if filename then
+            vim.g.grove_rules_file_cache = "rules:" .. filename
+            vim.g.grove_rules_file_cache_time = vim.loop.hrtime() / 1000000
+            vim.cmd('redrawstatus')
+          end
+        end
+      end
+    end,
+  })
+end
+
+--- Get lualine component for active rules file
+--- @return table Lualine component configuration
+function M.rules_file_component()
+  -- Set up periodic updates when component is first created
+  if not vim.g.grove_rules_file_timer then
+    -- Update immediately
+    vim.schedule(update_rules_file)
+
+    -- Then update every 5 seconds
+    vim.g.grove_rules_file_timer = vim.fn.timer_start(5000, function()
+      update_rules_file()
+    end, { ['repeat'] = -1 })
+  end
+
+  return {
+    function()
+      return M.rules_file()
+    end,
+    cond = function()
+      -- Only show on markdown files
+      return vim.bo.filetype == 'markdown'
+    end,
+  }
+end
+
 --- Parse YAML frontmatter from current buffer
 --- @return table|nil Frontmatter data or nil if not found
 local function parse_frontmatter()
