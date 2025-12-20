@@ -37,23 +37,24 @@ local function get_bar_content()
   local p_state = provider.state
 
   if p_state.plan_status and #p_state.plan_status > 0 then
-    -- Format plan status
+    -- Format plan status with icon
     local plan_parts = {}
     for _, stat in ipairs(p_state.plan_status) do
       table.insert(plan_parts, stat.text)
     end
-    table.insert(parts, table.concat(plan_parts, " "))
-  end
-
-  if p_state.rules_file then
-    table.insert(parts, p_state.rules_file)
+    table.insert(parts, "󰠡 " .. table.concat(plan_parts, " "))
   end
 
   if p_state.context_size then
-    table.insert(parts, p_state.context_size.display)
+    local ctx_part = "󰄨 " .. p_state.context_size.display
+    -- Add rules file in parens if present
+    if p_state.rules_file then
+      ctx_part = ctx_part .. " (" .. p_state.rules_file .. ")"
+    end
+    table.insert(parts, ctx_part)
   end
 
-  return table.concat(parts, " | ")
+  return table.concat(parts, "  ")
 end
 
 local function do_refresh()
@@ -77,10 +78,11 @@ local function do_refresh()
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, { content })
   vim.api.nvim_buf_set_option(state.buf, "modifiable", false)
 
-  -- Update window size based on content
+  -- Update window size based on content display width
   local opts = config.options.ui.status_bar
   local row = calculate_row(opts.position)
-  local width = math.max(#content + 2, 10)  -- Minimum width of 10
+  local content_display_width = vim.fn.strdisplaywidth(content)
+  local width = math.max(content_display_width + 4, 10)  -- +4 for padding and border
   local col = math.max(0, vim.o.columns - width)
 
   vim.api.nvim_win_set_config(state.win, {
@@ -94,40 +96,54 @@ local function do_refresh()
   -- Clear previous highlights
   vim.api.nvim_buf_clear_namespace(state.buf, 0, 0, -1)
 
-  -- Apply highlights
+  -- Apply highlights using byte positions
   local p_state = provider.state
-  local offset = 0
 
   -- Highlight plan status parts
   if p_state.plan_status and #p_state.plan_status > 0 then
+    -- Find where plan status starts in content (after "󰠡 ")
+    local icon_and_space = "󰠡 "
+    local byte_offset = #icon_and_space
+
     for i, stat in ipairs(p_state.plan_status) do
-      local text_len = #stat.text
-      vim.api.nvim_buf_add_highlight(state.buf, 0, stat.hl, 0, offset, offset + text_len)
-      offset = offset + text_len
+      local text_byte_len = #stat.text
+      vim.api.nvim_buf_add_highlight(state.buf, 0, stat.hl, 0, byte_offset, byte_offset + text_byte_len)
+      byte_offset = byte_offset + text_byte_len
       if i < #p_state.plan_status then
-        offset = offset + 1 -- space separator
+        byte_offset = byte_offset + 1 -- space separator
       end
     end
-    offset = offset + 3 -- " | "
   end
 
-  -- Highlight rules file
-  if p_state.rules_file then
-    offset = offset + #p_state.rules_file + 3 -- + " | "
-  end
-
-  -- Highlight context size
+  -- Highlight context size (find it in the content string)
   if p_state.context_size then
-    local match_start = content:find(p_state.context_size.display, 1, true)
-    if match_start then
+    local ctx_pattern = p_state.context_size.display
+    local ctx_start = content:find(ctx_pattern, 1, true)
+    if ctx_start then
       vim.api.nvim_buf_add_highlight(
         state.buf,
         0,
         p_state.context_size.hl_group,
         0,
-        match_start - 1,
-        match_start - 1 + #p_state.context_size.display
+        ctx_start - 1,
+        ctx_start - 1 + #ctx_pattern
       )
+
+      -- Highlight rules file in parens (muted & italic)
+      if p_state.rules_file then
+        local rules_pattern = "(" .. p_state.rules_file .. ")"
+        local rules_start = content:find(rules_pattern, ctx_start, true)
+        if rules_start then
+          vim.api.nvim_buf_add_highlight(
+            state.buf,
+            0,
+            "Comment",
+            0,
+            rules_start - 1,
+            rules_start - 1 + #rules_pattern
+          )
+        end
+      end
     end
   end
 end
@@ -162,11 +178,13 @@ function M.show()
     col = col,
     focusable = false,
     style = 'minimal',
-    border = 'none',
+    border = 'single',
     zindex = 50,
   })
 
-  vim.wo[state.win].winhighlight = "Normal:StatusLine"
+  -- Create a custom dark gray border highlight
+  vim.cmd("highlight GroveStatusBarBorder guifg=#3c3c3c ctermfg=237")
+  vim.wo[state.win].winhighlight = "Normal:StatusLine,FloatBorder:GroveStatusBarBorder"
 
   -- Handle window resizing
   vim.api.nvim_create_autocmd("VimResized", {

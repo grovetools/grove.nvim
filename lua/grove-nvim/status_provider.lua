@@ -71,7 +71,7 @@ local function update_context_size()
           end
 
           local new_data = {
-            display = "ctx:" .. formatted,
+            display = "cx:" .. formatted,
             hl_group = hl_group,
             tokens = tokens,
           }
