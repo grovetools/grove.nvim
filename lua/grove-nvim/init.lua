@@ -268,9 +268,9 @@ function M.status()
   return ''
 end
 
---- Get lualine component for statusline integration
+--- Get lualine component for chat running status
 --- @return table Lualine component configuration
-function M.lualine_component()
+function M.chat_running_component()
   return {
     function()
       return M.status()
@@ -279,6 +279,12 @@ function M.lualine_component()
       return vim.g.grove_chat_running == true
     end,
   }
+end
+
+--- Deprecated: Use chat_running_component() instead
+--- @return table Lualine component configuration
+function M.lualine_component()
+  return M.chat_running_component()
 end
 
 --- Get context size for statusline integration
