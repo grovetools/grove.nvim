@@ -1,8 +1,38 @@
 local M = {}
 
+local config = require("grove-nvim.config")
+local provider = require("grove-nvim.status_provider")
+
 -- State for background job
 local running_job = nil
 local spinner_timer = nil
+
+-- Highlight groups setup
+local highlights_defined = false
+local function setup_highlights()
+  if highlights_defined then return end
+  vim.cmd("highlight default link GroveCtxTokens0 Normal")
+  vim.cmd("highlight GroveCtxTokens1 guifg=#D6C3F7 ctermfg=189") -- Lightest Purple
+  vim.cmd("highlight GroveCtxTokens2 guifg=#B99AF5 ctermfg=141")
+  vim.cmd("highlight GroveCtxTokens3 guifg=#9F72F2 ctermfg=135")
+  vim.cmd("highlight GroveCtxTokens4 guifg=#8549EF ctermfg=99")
+  vim.cmd("highlight GroveCtxTokens5 guifg=#6E28E8 ctermfg=93") -- Darkest Purple
+  vim.cmd("highlight GroveCtxTokensWarn guifg=#FF5555 ctermfg=196") -- Red for >1M tokens
+  highlights_defined = true
+end
+
+--- Main setup function for the plugin
+function M.setup(opts)
+  config.setup(opts)
+  setup_highlights()
+
+  if config.options.ui.status_bar.enable then
+    require("grove-nvim.status_bar").show()
+  end
+
+  -- Start the data fetching timers
+  provider.start()
+end
 
 --- Opens a floating terminal and runs the `neogrove chat` command for the current buffer.
 --- @param args table|nil The arguments object from `nvim_create_user_command`.
@@ -287,277 +317,49 @@ function M.lualine_component()
   return M.chat_running_component()
 end
 
---- Get context size for statusline integration
---- @return string Context size string
-function M.context_size()
-  -- Return cached value if available and recent (cache for 5 seconds)
-  local cache_duration = 5000 -- milliseconds
-  local now = vim.loop.hrtime() / 1000000
-
-  if vim.g.grove_context_size_cache and vim.g.grove_context_size_cache_time then
-    if (now - vim.g.grove_context_size_cache_time) < cache_duration then
-      return vim.g.grove_context_size_cache
-    end
-  end
-
-  return vim.g.grove_context_size_cache or ''
-end
-
---- Update context size cache (called periodically)
-local function update_context_size()
-  local cx_path = vim.fn.exepath("cx")
-  if cx_path == "" then
-    return
-  end
-
-  -- Get current buffer path to check if it's a chat file
-  local buf_path = vim.api.nvim_buf_get_name(0)
-  if buf_path == "" or not buf_path:match("%.md$") then
-    return
-  end
-
-  -- Run cx stats asynchronously
-  vim.fn.jobstart({ cx_path, "stats", "--chat-file", buf_path }, {
-    stdout_buffered = true,
-    on_stdout = function(_, data)
-      if data then
-        local stdout = table.concat(data, "\n")
-        local ok, stats = pcall(vim.json.decode, stdout)
-        if ok and stats and stats.context_tokens then
-          -- Format the number (e.g., 13.5k)
-          local formatted
-          if stats.context_tokens < 1000 then
-            formatted = tostring(stats.context_tokens)
-          elseif stats.context_tokens < 1000000 then
-            formatted = string.format("%.1fk", stats.context_tokens / 1000)
-          else
-            formatted = string.format("%.1fM", stats.context_tokens / 1000000)
-          end
-
-          vim.g.grove_context_size_cache = "ctx:" .. formatted
-          vim.g.grove_context_size_cache_time = vim.loop.hrtime() / 1000000
-          vim.cmd('redrawstatus')
-        end
-      end
-    end,
-  })
-end
-
 --- Get lualine component for context size
 --- @return table Lualine component configuration
 function M.context_size_component()
-  -- Set up periodic updates when component is first created
-  if not vim.g.grove_context_size_timer then
-    -- Update immediately
-    vim.schedule(update_context_size)
-
-    -- Then update every 5 seconds
-    vim.g.grove_context_size_timer = vim.fn.timer_start(5000, function()
-      update_context_size()
-    end, { ['repeat'] = -1 })
-  end
+  setup_highlights()
 
   return {
     function()
-      return M.context_size()
+      local cache = provider.state.context_size
+      if type(cache) == "table" and cache.display then
+        -- Use lualine's inline highlighting format
+        return string.format("%%#%s#%s%%*", cache.hl_group, cache.display)
+      end
+      return ""
     end,
     cond = function()
-      -- Only show on markdown files
+      -- Hide if native status bar is enabled
+      if config.options.ui.status_bar.enable then return false end
       return vim.bo.filetype == 'markdown'
     end,
   }
-end
-
---- Get active rules file for statusline integration
---- @return string Rules file name
-function M.rules_file()
-  -- Return cached value if available and recent (cache for 5 seconds)
-  local cache_duration = 5000 -- milliseconds
-  local now = vim.loop.hrtime() / 1000000
-
-  if vim.g.grove_rules_file_cache and vim.g.grove_rules_file_cache_time then
-    if (now - vim.g.grove_rules_file_cache_time) < cache_duration then
-      return vim.g.grove_rules_file_cache
-    end
-  end
-
-  return vim.g.grove_rules_file_cache or ''
-end
-
---- Update rules file cache (called periodically)
-local function update_rules_file()
-  local cx_path = vim.fn.exepath("cx")
-  if cx_path == "" then
-    return
-  end
-
-  -- Run cx rules print-path to get active rules file path
-  vim.fn.jobstart({ cx_path, "rules", "print-path" }, {
-    stdout_buffered = true,
-    on_stdout = function(_, data)
-      if data then
-        local stdout = table.concat(data, "\n"):gsub("%s+$", "") -- trim whitespace
-        if stdout ~= "" then
-          -- Extract directory and filename (e.g., ".grove/rules" or ".cx/default.rules")
-          local dir_and_file = stdout:match("([^/]+/[^/]+)$")
-          if dir_and_file then
-            vim.g.grove_rules_file_cache = dir_and_file
-            vim.g.grove_rules_file_cache_time = vim.loop.hrtime() / 1000000
-            vim.cmd('redrawstatus')
-          else
-            -- Fallback to just filename if pattern doesn't match
-            local filename = stdout:match("([^/]+)$")
-            if filename then
-              vim.g.grove_rules_file_cache = filename
-              vim.g.grove_rules_file_cache_time = vim.loop.hrtime() / 1000000
-              vim.cmd('redrawstatus')
-            end
-          end
-        end
-      end
-    end,
-  })
 end
 
 --- Get lualine component for active rules file
 --- @return table Lualine component configuration
 function M.rules_file_component()
-  -- Set up periodic updates when component is first created
-  if not vim.g.grove_rules_file_timer then
-    -- Update immediately
-    vim.schedule(update_rules_file)
-
-    -- Then update every 5 seconds
-    vim.g.grove_rules_file_timer = vim.fn.timer_start(5000, function()
-      update_rules_file()
-    end, { ['repeat'] = -1 })
-  end
-
   return {
     function()
-      return M.rules_file()
+      return provider.state.rules_file or ""
     end,
     cond = function()
-      -- Only show on markdown files
+      -- Hide if native status bar is enabled
+      if config.options.ui.status_bar.enable then return false end
       return vim.bo.filetype == 'markdown'
     end,
   }
 end
 
---- Get plan status for statusline integration
---- @return string Plan status string
-function M.plan_status()
-  -- Return cached value if available and recent (cache for 2 seconds)
-  local cache_duration = 2000 -- milliseconds
-  local now = vim.loop.hrtime() / 1000000
-
-  if vim.g.grove_plan_status_cache and vim.g.grove_plan_status_cache_time then
-    if (now - vim.g.grove_plan_status_cache_time) < cache_duration then
-      return vim.g.grove_plan_status_cache
-    end
-  end
-
-  return vim.g.grove_plan_status_cache or ''
-end
-
---- Update plan status cache (called periodically)
-local function update_plan_status()
-  local flow_path = vim.fn.exepath("flow")
-  if flow_path == "" then
-    return
-  end
-
-  -- Simply call flow plan status --json (works from any directory if plan is set)
-  vim.fn.jobstart({ flow_path, "plan", "status", "--json" }, {
-    stdout_buffered = true,
-    on_stdout = function(_, data)
-      if data then
-        local stdout = table.concat(data, "\n")
-        local ok, plan_data = pcall(vim.json.decode, stdout)
-
-        if ok and plan_data and plan_data.jobs then
-          -- Calculate statistics
-          local stats = {}
-          local completed = 0
-          local running = 0
-          local pending = 0
-          local failed = 0
-
-          for _, job in ipairs(plan_data.jobs) do
-            if job.status == "completed" then
-              completed = completed + 1
-            elseif job.status == "running" then
-              running = running + 1
-            elseif job.status == "pending" or job.status == "pending_user" or job.status == "pending_llm" then
-              pending = pending + 1
-            elseif job.status == "failed" then
-              failed = failed + 1
-            end
-          end
-
-          -- Build stats array with color information
-          local colored_stats = {}
-
-          -- Add plan name first
-          if plan_data.plan then
-            table.insert(colored_stats, { text = plan_data.plan, hl = "DiagnosticInfo" })
-          end
-
-          if completed > 0 then
-            table.insert(colored_stats, { text = "✓" .. completed, hl = "DiagnosticOk" })
-          end
-          if running > 0 then
-            table.insert(colored_stats, { text = "⟳" .. running, hl = "DiagnosticInfo" })
-          end
-          if pending > 0 then
-            table.insert(colored_stats, { text = "○" .. pending, hl = "Comment" })
-          end
-          if failed > 0 then
-            table.insert(colored_stats, { text = "✗" .. failed, hl = "DiagnosticError" })
-          end
-
-          if #colored_stats > 0 then
-            vim.g.grove_plan_status_cache = colored_stats
-            vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
-            vim.cmd('redrawstatus')
-          else
-            vim.g.grove_plan_status_cache = nil
-            vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
-          end
-        else
-          -- No active plan or error parsing
-          vim.g.grove_plan_status_cache = ""
-          vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
-        end
-      end
-    end,
-    on_stderr = function(_, data)
-      -- If there's an error (e.g., no active plan), clear the cache
-      if data and #data > 0 then
-        vim.g.grove_plan_status_cache = ""
-        vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
-      end
-    end,
-  })
-end
-
 --- Get lualine component for plan status
 --- @return table Lualine component configuration
 function M.plan_status_component()
-  -- Set up periodic updates when component is first created
-  if not vim.g.grove_plan_status_timer then
-    -- Update immediately
-    vim.schedule(update_plan_status)
-
-    -- Then update every 2 seconds (more frequent for active plans)
-    vim.g.grove_plan_status_timer = vim.fn.timer_start(2000, function()
-      update_plan_status()
-    end, { ['repeat'] = -1 })
-  end
-
   return {
     function()
-      local stats = vim.g.grove_plan_status_cache
+      local stats = provider.state.plan_status
       if not stats or type(stats) ~= "table" then
         return ""
       end
@@ -575,8 +377,10 @@ function M.plan_status_component()
       return table.concat(parts)
     end,
     cond = function()
+      -- Hide if native status bar is enabled
+      if config.options.ui.status_bar.enable then return false end
       -- Only show when there's active plan status
-      local stats = vim.g.grove_plan_status_cache
+      local stats = provider.state.plan_status
       return stats and type(stats) == "table" and #stats > 0
     end,
   }

@@ -1,6 +1,13 @@
 -- Initialize the jump file watcher
 require("grove-nvim.watcher")
 
+-- Expose a setup function for users to call from their config
+_G.grove_nvim = {
+  setup = function(opts)
+    require("grove-nvim").setup(opts)
+  end
+}
+
 vim.api.nvim_create_user_command("GroveChatRun", function(args)
 	require("grove-nvim").chat_run(args)
 end, {
@@ -13,6 +20,13 @@ vim.api.nvim_create_user_command("GroveToggleChatUI", function()
 end, {
 	nargs = 0,
 	desc = "Toggle the Grove Chat UI display for the current buffer.",
+})
+
+vim.api.nvim_create_user_command("GroveToggleStatusBar", function()
+	require("grove-nvim.status_bar").toggle()
+end, {
+	nargs = 0,
+	desc = "Toggle the native Grove status bar.",
 })
 
 -- Plan Commands
