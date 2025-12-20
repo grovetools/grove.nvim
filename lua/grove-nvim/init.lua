@@ -456,54 +456,13 @@ end
 
 --- Update plan status cache (called periodically)
 local function update_plan_status()
-  -- Read grove state file to get active plan
-  local state_file = vim.fn.expand("~/.grove/state.yml")
-  if vim.fn.filereadable(state_file) == 0 then
-    vim.g.grove_plan_status_cache = ""
-    return
-  end
-
-  local state_content = vim.fn.readfile(state_file)
-  local active_plan = nil
-
-  -- Parse YAML to find flow.active_plan
-  for _, line in ipairs(state_content) do
-    local plan = line:match("^flow%.active_plan:%s*(.+)")
-    if plan then
-      active_plan = plan
-      break
-    end
-  end
-
-  if not active_plan or active_plan == "" then
-    vim.g.grove_plan_status_cache = ""
-    return
-  end
-
-  -- Resolve plan path
-  local plan_path = vim.fn.expand("~/notebooks/nb/workspaces/*/plans/" .. active_plan)
-  -- Use glob to find the actual path
-  local matches = vim.fn.glob(plan_path, false, true)
-  if #matches == 0 then
-    -- Try alternative path
-    plan_path = vim.fn.expand("~/notebooks/nb/plans/" .. active_plan)
-    matches = vim.fn.glob(plan_path, false, true)
-  end
-
-  if #matches == 0 then
-    vim.g.grove_plan_status_cache = ""
-    return
-  end
-
-  plan_path = matches[1]
-
-  -- Run flow plan status on the specific plan directory
   local flow_path = vim.fn.exepath("flow")
   if flow_path == "" then
     return
   end
 
-  vim.fn.jobstart({ flow_path, "plan", "status", plan_path, "--json" }, {
+  -- Simply call flow plan status --json (works from any directory if plan is set)
+  vim.fn.jobstart({ flow_path, "plan", "status", "--json" }, {
     stdout_buffered = true,
     on_stdout = function(_, data)
       if data then
@@ -552,7 +511,18 @@ local function update_plan_status()
             vim.g.grove_plan_status_cache = ""
             vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
           end
+        else
+          -- No active plan or error parsing
+          vim.g.grove_plan_status_cache = ""
+          vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
         end
+      end
+    end,
+    on_stderr = function(_, data)
+      -- If there's an error (e.g., no active plan), clear the cache
+      if data and #data > 0 then
+        vim.g.grove_plan_status_cache = ""
+        vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
       end
     end,
   })
