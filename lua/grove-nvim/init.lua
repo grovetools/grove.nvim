@@ -495,26 +495,27 @@ local function update_plan_status()
             end
           end
 
-          -- Build stats string
+          -- Build stats array with color information
+          local colored_stats = {}
           if completed > 0 then
-            table.insert(stats, "✓" .. completed)
+            table.insert(colored_stats, { text = "✓" .. completed, hl = "DiagnosticOk" })
           end
           if running > 0 then
-            table.insert(stats, "⟳" .. running)
+            table.insert(colored_stats, { text = "⟳" .. running, hl = "DiagnosticInfo" })
           end
           if pending > 0 then
-            table.insert(stats, "○" .. pending)
+            table.insert(colored_stats, { text = "○" .. pending, hl = "Comment" })
           end
           if failed > 0 then
-            table.insert(stats, "✗" .. failed)
+            table.insert(colored_stats, { text = "✗" .. failed, hl = "DiagnosticError" })
           end
 
-          if #stats > 0 then
-            vim.g.grove_plan_status_cache = table.concat(stats, " ")
+          if #colored_stats > 0 then
+            vim.g.grove_plan_status_cache = colored_stats
             vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
             vim.cmd('redrawstatus')
           else
-            vim.g.grove_plan_status_cache = ""
+            vim.g.grove_plan_status_cache = nil
             vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
           end
         else
@@ -550,11 +551,27 @@ function M.plan_status_component()
 
   return {
     function()
-      return M.plan_status()
+      local stats = vim.g.grove_plan_status_cache
+      if not stats or type(stats) ~= "table" then
+        return ""
+      end
+
+      -- Build colored string parts for lualine
+      local parts = {}
+      for i, stat in ipairs(stats) do
+        if i > 1 then
+          table.insert(parts, " ")
+        end
+        -- Use %#HlGroup# syntax for inline highlighting
+        table.insert(parts, "%#" .. stat.hl .. "#" .. stat.text .. "%*")
+      end
+
+      return table.concat(parts)
     end,
     cond = function()
       -- Only show when there's active plan status
-      return vim.g.grove_plan_status_cache and vim.g.grove_plan_status_cache ~= ''
+      local stats = vim.g.grove_plan_status_cache
+      return stats and type(stats) == "table" and #stats > 0
     end,
   }
 end
