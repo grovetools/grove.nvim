@@ -109,7 +109,8 @@ local function update(bufnr)
 
 			-- Check if this is a new/empty chat (no content after the directive)
 			local has_content_after_directive = false
-			for i = last_user_turn_line_nr + 1, #lines do
+			local first_line_after_directive = last_user_turn_line_nr + 1
+			for i = first_line_after_directive, #lines do
 				if lines[i]:match("%S") then -- Check for non-whitespace
 					has_content_after_directive = true
 					break
@@ -117,11 +118,16 @@ local function update(bufnr)
 			end
 
 			-- Add a helpful prompt if there's no content yet
-			if not has_content_after_directive then
-				api.nvim_buf_set_extmark(bufnr, ns_id, last_user_turn_line_nr, 0, {
-					virt_lines = { { { "Start typing your question here...", "Comment" } } },
-					virt_lines_above = false,
-				})
+			-- Use virt_text on the empty line (which is writable)
+			if not has_content_after_directive and first_line_after_directive <= #lines then
+				-- Check if we're not on that line (cursor position)
+				local cursor_line = api.nvim_win_get_cursor(0)[1]
+				if cursor_line ~= first_line_after_directive then
+					api.nvim_buf_set_extmark(bufnr, ns_id, first_line_after_directive - 1, 0, {
+						virt_text = { { "Start typing your question here...", "Comment" } },
+						virt_text_pos = "overlay",
+					})
+				end
 			end
 		end)
 	end)
@@ -144,7 +150,7 @@ function M.setup(bufnr)
 
 	-- Create buffer-local autocommand group
 	local group = api.nvim_create_augroup("GroveChatStatsUIRender_" .. bufnr, { clear = true })
-	api.nvim_create_autocmd({ "BufEnter", "TextChanged", "TextChangedI" }, {
+	api.nvim_create_autocmd({ "BufEnter", "TextChanged", "TextChangedI", "CursorMoved", "CursorMovedI" }, {
 		group = group,
 		buffer = bufnr,
 		callback = function()
