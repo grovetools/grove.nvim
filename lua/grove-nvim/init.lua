@@ -263,7 +263,7 @@ function M.status()
     local spinners = {'⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'}
     local ms = vim.loop.hrtime() / 1000000
     local frame = math.floor(ms / 100) % #spinners
-    return spinners[frame + 1] .. ' Grove'
+    return spinners[frame + 1] .. ' Running chat'
   end
   return ''
 end
