@@ -7,16 +7,29 @@ local state = {
   buf = nil,
 }
 
+-- Helper to get the reserved space at bottom (statusline + status bar)
+local function get_bottom_offset()
+  local has_statusline = vim.o.laststatus > 0
+  local statusline_offset = has_statusline and 1 or 0
+
+  -- Add 1 more line if our status bar is enabled at bottom
+  local status_bar_enabled = config.options.ui.status_bar.enable
+  local status_bar_at_bottom = config.options.ui.status_bar.position == 'bottom'
+  local status_bar_offset = (status_bar_enabled and status_bar_at_bottom) and 1 or 0
+
+  return statusline_offset + status_bar_offset + 1
+end
+
+-- Expose for other modules to use
+M.get_bottom_offset = get_bottom_offset
+
 -- Helper to calculate row position accounting for statusline
 local function calculate_row(position)
   if position == 'top' then
     return 0
   end
 
-  -- For bottom: check if lualine or statusline is enabled
-  local has_statusline = vim.o.laststatus > 0
-  local offset = has_statusline and 2 or 1
-  return vim.o.lines - 1 - offset
+  return vim.o.lines - get_bottom_offset()
 end
 
 local function get_bar_content()

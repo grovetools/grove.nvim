@@ -26,12 +26,20 @@ function M.setup(opts)
   config.setup(opts)
   setup_highlights()
 
-  if config.options.ui.status_bar.enable then
-    require("grove-nvim.status_bar").show()
-  end
-
   -- Start the data fetching timers
   provider.start()
+
+  -- Show status bar after UI is ready
+  if config.options.ui.status_bar.enable then
+    vim.api.nvim_create_autocmd("VimEnter", {
+      once = true,
+      callback = function()
+        vim.defer_fn(function()
+          require("grove-nvim.status_bar").show()
+        end, 50)
+      end,
+    })
+  end
 end
 
 --- Opens a floating terminal and runs the `neogrove chat` command for the current buffer.
