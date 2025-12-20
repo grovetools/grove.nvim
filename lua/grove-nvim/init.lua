@@ -281,6 +281,87 @@ function M.lualine_component()
   }
 end
 
+--- Get context size for statusline integration
+--- @return string Context size string
+function M.context_size()
+  -- Return cached value if available and recent (cache for 5 seconds)
+  local cache_duration = 5000 -- milliseconds
+  local now = vim.loop.hrtime() / 1000000
+
+  if vim.g.grove_context_size_cache and vim.g.grove_context_size_cache_time then
+    if (now - vim.g.grove_context_size_cache_time) < cache_duration then
+      return vim.g.grove_context_size_cache
+    end
+  end
+
+  return vim.g.grove_context_size_cache or ''
+end
+
+--- Update context size cache (called periodically)
+local function update_context_size()
+  local cx_path = vim.fn.exepath("cx")
+  if cx_path == "" then
+    return
+  end
+
+  -- Get current buffer path to check if it's a chat file
+  local buf_path = vim.api.nvim_buf_get_name(0)
+  if buf_path == "" or not buf_path:match("%.md$") then
+    return
+  end
+
+  -- Run cx stats asynchronously
+  vim.fn.jobstart({ cx_path, "stats", "--chat-file", buf_path }, {
+    stdout_buffered = true,
+    on_stdout = function(_, data)
+      if data then
+        local stdout = table.concat(data, "\n")
+        local ok, stats = pcall(vim.json.decode, stdout)
+        if ok and stats and stats.context_tokens then
+          -- Format the number (e.g., 13.5k)
+          local formatted
+          if stats.context_tokens < 1000 then
+            formatted = tostring(stats.context_tokens)
+          elseif stats.context_tokens < 1000000 then
+            formatted = string.format("%.1fk", stats.context_tokens / 1000)
+          else
+            formatted = string.format("%.1fM", stats.context_tokens / 1000000)
+          end
+
+          vim.g.grove_context_size_cache = "ctx:" .. formatted
+          vim.g.grove_context_size_cache_time = vim.loop.hrtime() / 1000000
+          vim.cmd('redrawstatus')
+        end
+      end
+    end,
+  })
+end
+
+--- Get lualine component for context size
+--- @return table Lualine component configuration
+function M.context_size_component()
+  -- Set up periodic updates when component is first created
+  if not vim.g.grove_context_size_timer then
+    -- Update immediately
+    vim.schedule(update_context_size)
+
+    -- Then update every 5 seconds
+    vim.g.grove_context_size_timer = vim.fn.timer_start(5000, function()
+      update_context_size()
+    end, { ['repeat'] = -1 })
+  end
+
+  return {
+    function()
+      return M.context_size()
+    end,
+    cond = function()
+      -- Only show on markdown files
+      return vim.bo.filetype == 'markdown'
+    end,
+  }
+end
+
 --- Parse YAML frontmatter from current buffer
 --- @return table|nil Frontmatter data or nil if not found
 local function parse_frontmatter()
