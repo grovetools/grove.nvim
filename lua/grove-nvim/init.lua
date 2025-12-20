@@ -398,12 +398,20 @@ local function update_rules_file()
       if data then
         local stdout = table.concat(data, "\n"):gsub("%s+$", "") -- trim whitespace
         if stdout ~= "" then
-          -- Extract just the filename
-          local filename = stdout:match("([^/]+)$")
-          if filename then
-            vim.g.grove_rules_file_cache = "rules:" .. filename
+          -- Extract directory and filename (e.g., ".grove/rules" or ".cx/default.rules")
+          local dir_and_file = stdout:match("([^/]+/[^/]+)$")
+          if dir_and_file then
+            vim.g.grove_rules_file_cache = dir_and_file
             vim.g.grove_rules_file_cache_time = vim.loop.hrtime() / 1000000
             vim.cmd('redrawstatus')
+          else
+            -- Fallback to just filename if pattern doesn't match
+            local filename = stdout:match("([^/]+)$")
+            if filename then
+              vim.g.grove_rules_file_cache = filename
+              vim.g.grove_rules_file_cache_time = vim.loop.hrtime() / 1000000
+              vim.cmd('redrawstatus')
+            end
           end
         end
       end
