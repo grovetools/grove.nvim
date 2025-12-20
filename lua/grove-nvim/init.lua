@@ -391,17 +391,15 @@ local function update_rules_file()
     return
   end
 
-  -- Run cx view to get active rules file
-  vim.fn.jobstart({ cx_path, "view" }, {
+  -- Run cx rules print-path to get active rules file path
+  vim.fn.jobstart({ cx_path, "rules", "print-path" }, {
     stdout_buffered = true,
     on_stdout = function(_, data)
       if data then
-        local stdout = table.concat(data, "\n")
-        -- Parse the output to find "Active rules: <path>"
-        local active_rules = stdout:match("Active rules:%s*(.-)%s*\n")
-        if active_rules then
+        local stdout = table.concat(data, "\n"):gsub("%s+$", "") -- trim whitespace
+        if stdout ~= "" then
           -- Extract just the filename
-          local filename = active_rules:match("([^/]+)$")
+          local filename = stdout:match("([^/]+)$")
           if filename then
             vim.g.grove_rules_file_cache = "rules:" .. filename
             vim.g.grove_rules_file_cache_time = vim.loop.hrtime() / 1000000
