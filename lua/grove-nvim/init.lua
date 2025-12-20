@@ -268,6 +268,19 @@ function M.status()
   return ''
 end
 
+--- Get lualine component for statusline integration
+--- @return table Lualine component configuration
+function M.lualine_component()
+  return {
+    function()
+      return M.status()
+    end,
+    cond = function()
+      return vim.g.grove_chat_running == true
+    end,
+  }
+end
+
 --- Parse YAML frontmatter from current buffer
 --- @return table|nil Frontmatter data or nil if not found
 local function parse_frontmatter()
