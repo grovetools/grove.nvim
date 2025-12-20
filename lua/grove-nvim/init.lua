@@ -432,6 +432,110 @@ function M.rules_file_component()
   }
 end
 
+--- Get plan status for statusline integration
+--- @return string Plan status string
+function M.plan_status()
+  -- Return cached value if available and recent (cache for 2 seconds)
+  local cache_duration = 2000 -- milliseconds
+  local now = vim.loop.hrtime() / 1000000
+
+  if vim.g.grove_plan_status_cache and vim.g.grove_plan_status_cache_time then
+    if (now - vim.g.grove_plan_status_cache_time) < cache_duration then
+      return vim.g.grove_plan_status_cache
+    end
+  end
+
+  return vim.g.grove_plan_status_cache or ''
+end
+
+--- Update plan status cache (called periodically)
+local function update_plan_status()
+  local flow_path = vim.fn.exepath("flow")
+  if flow_path == "" then
+    return
+  end
+
+  -- Run flow plan status to get statistics
+  vim.fn.jobstart({ flow_path, "plan", "status" }, {
+    stdout_buffered = true,
+    on_stdout = function(_, data)
+      if data then
+        local stdout = table.concat(data, "\n")
+
+        -- Parse plan name (first line usually contains it)
+        local plan_name = stdout:match("Plan: ([^\n]+)")
+        if not plan_name then
+          -- Try to extract from path or other indicators
+          plan_name = stdout:match("Active plan: ([^\n]+)")
+        end
+
+        -- Parse statistics from output
+        -- Looking for patterns like "✓ 3", "⟳ 1", "○ 2", "✗ 1"
+        local stats = {}
+
+        -- Completed (✓)
+        local completed = stdout:match("✓%s*(%d+)")
+        if completed and tonumber(completed) > 0 then
+          table.insert(stats, "✓" .. completed)
+        end
+
+        -- Running (⟳)
+        local running = stdout:match("⟳%s*(%d+)")
+        if running and tonumber(running) > 0 then
+          table.insert(stats, "⟳" .. running)
+        end
+
+        -- Pending (○)
+        local pending = stdout:match("○%s*(%d+)")
+        if pending and tonumber(pending) > 0 then
+          table.insert(stats, "○" .. pending)
+        end
+
+        -- Failed (✗)
+        local failed = stdout:match("✗%s*(%d+)")
+        if failed and tonumber(failed) > 0 then
+          table.insert(stats, "✗" .. failed)
+        end
+
+        if #stats > 0 then
+          vim.g.grove_plan_status_cache = table.concat(stats, " ")
+          vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
+          vim.cmd('redrawstatus')
+        else
+          -- No active plan or no stats
+          vim.g.grove_plan_status_cache = ""
+          vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
+        end
+      end
+    end,
+  })
+end
+
+--- Get lualine component for plan status
+--- @return table Lualine component configuration
+function M.plan_status_component()
+  -- Set up periodic updates when component is first created
+  if not vim.g.grove_plan_status_timer then
+    -- Update immediately
+    vim.schedule(update_plan_status)
+
+    -- Then update every 2 seconds (more frequent for active plans)
+    vim.g.grove_plan_status_timer = vim.fn.timer_start(2000, function()
+      update_plan_status()
+    end, { ['repeat'] = -1 })
+  end
+
+  return {
+    function()
+      return M.plan_status()
+    end,
+    cond = function()
+      -- Only show when there's active plan status
+      return vim.g.grove_plan_status_cache and vim.g.grove_plan_status_cache ~= ''
+    end,
+  }
+end
+
 --- Parse YAML frontmatter from current buffer
 --- @return table|nil Frontmatter data or nil if not found
 local function parse_frontmatter()
