@@ -497,6 +497,12 @@ local function update_plan_status()
 
           -- Build stats array with color information
           local colored_stats = {}
+
+          -- Add plan name first
+          if plan_data.plan then
+            table.insert(colored_stats, { text = plan_data.plan, hl = "DiagnosticInfo" })
+          end
+
           if completed > 0 then
             table.insert(colored_stats, { text = "✓" .. completed, hl = "DiagnosticOk" })
           end
