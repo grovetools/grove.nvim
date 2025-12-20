@@ -456,61 +456,102 @@ end
 
 --- Update plan status cache (called periodically)
 local function update_plan_status()
+  -- Read grove state file to get active plan
+  local state_file = vim.fn.expand("~/.grove/state.yml")
+  if vim.fn.filereadable(state_file) == 0 then
+    vim.g.grove_plan_status_cache = ""
+    return
+  end
+
+  local state_content = vim.fn.readfile(state_file)
+  local active_plan = nil
+
+  -- Parse YAML to find flow.active_plan
+  for _, line in ipairs(state_content) do
+    local plan = line:match("^flow%.active_plan:%s*(.+)")
+    if plan then
+      active_plan = plan
+      break
+    end
+  end
+
+  if not active_plan or active_plan == "" then
+    vim.g.grove_plan_status_cache = ""
+    return
+  end
+
+  -- Resolve plan path
+  local plan_path = vim.fn.expand("~/notebooks/nb/workspaces/*/plans/" .. active_plan)
+  -- Use glob to find the actual path
+  local matches = vim.fn.glob(plan_path, false, true)
+  if #matches == 0 then
+    -- Try alternative path
+    plan_path = vim.fn.expand("~/notebooks/nb/plans/" .. active_plan)
+    matches = vim.fn.glob(plan_path, false, true)
+  end
+
+  if #matches == 0 then
+    vim.g.grove_plan_status_cache = ""
+    return
+  end
+
+  plan_path = matches[1]
+
+  -- Run flow plan status on the specific plan directory
   local flow_path = vim.fn.exepath("flow")
   if flow_path == "" then
     return
   end
 
-  -- Run flow plan status to get statistics
-  vim.fn.jobstart({ flow_path, "plan", "status" }, {
+  vim.fn.jobstart({ flow_path, "plan", "status", plan_path, "--json" }, {
     stdout_buffered = true,
     on_stdout = function(_, data)
       if data then
         local stdout = table.concat(data, "\n")
+        local ok, plan_data = pcall(vim.json.decode, stdout)
 
-        -- Parse plan name (first line usually contains it)
-        local plan_name = stdout:match("Plan: ([^\n]+)")
-        if not plan_name then
-          -- Try to extract from path or other indicators
-          plan_name = stdout:match("Active plan: ([^\n]+)")
-        end
+        if ok and plan_data and plan_data.jobs then
+          -- Calculate statistics
+          local stats = {}
+          local completed = 0
+          local running = 0
+          local pending = 0
+          local failed = 0
 
-        -- Parse statistics from output
-        -- Looking for patterns like "✓ 3", "⟳ 1", "○ 2", "✗ 1"
-        local stats = {}
+          for _, job in ipairs(plan_data.jobs) do
+            if job.status == "completed" then
+              completed = completed + 1
+            elseif job.status == "running" then
+              running = running + 1
+            elseif job.status == "pending" or job.status == "pending_user" or job.status == "pending_llm" then
+              pending = pending + 1
+            elseif job.status == "failed" then
+              failed = failed + 1
+            end
+          end
 
-        -- Completed (✓)
-        local completed = stdout:match("✓%s*(%d+)")
-        if completed and tonumber(completed) > 0 then
-          table.insert(stats, "✓" .. completed)
-        end
+          -- Build stats string
+          if completed > 0 then
+            table.insert(stats, "✓" .. completed)
+          end
+          if running > 0 then
+            table.insert(stats, "⟳" .. running)
+          end
+          if pending > 0 then
+            table.insert(stats, "○" .. pending)
+          end
+          if failed > 0 then
+            table.insert(stats, "✗" .. failed)
+          end
 
-        -- Running (⟳)
-        local running = stdout:match("⟳%s*(%d+)")
-        if running and tonumber(running) > 0 then
-          table.insert(stats, "⟳" .. running)
-        end
-
-        -- Pending (○)
-        local pending = stdout:match("○%s*(%d+)")
-        if pending and tonumber(pending) > 0 then
-          table.insert(stats, "○" .. pending)
-        end
-
-        -- Failed (✗)
-        local failed = stdout:match("✗%s*(%d+)")
-        if failed and tonumber(failed) > 0 then
-          table.insert(stats, "✗" .. failed)
-        end
-
-        if #stats > 0 then
-          vim.g.grove_plan_status_cache = table.concat(stats, " ")
-          vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
-          vim.cmd('redrawstatus')
-        else
-          -- No active plan or no stats
-          vim.g.grove_plan_status_cache = ""
-          vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
+          if #stats > 0 then
+            vim.g.grove_plan_status_cache = table.concat(stats, " ")
+            vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
+            vim.cmd('redrawstatus')
+          else
+            vim.g.grove_plan_status_cache = ""
+            vim.g.grove_plan_status_cache_time = vim.loop.hrtime() / 1000000
+          end
         end
       end
     end,
