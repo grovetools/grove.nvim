@@ -109,8 +109,11 @@ local function update(bufnr)
 
 			-- Check if this is a new/empty chat (no content after the directive)
 			local has_content_after_directive = false
-			local first_line_after_directive = last_user_turn_line_nr + 1
-			for i = first_line_after_directive, #lines do
+			-- Skip the blank line right after the directive
+			local first_blank_line = last_user_turn_line_nr + 1
+			local prompt_line = last_user_turn_line_nr + 2 -- Line after the blank line
+
+			for i = prompt_line, #lines do
 				if lines[i]:match("%S") then -- Check for non-whitespace
 					has_content_after_directive = true
 					break
@@ -118,12 +121,12 @@ local function update(bufnr)
 			end
 
 			-- Add a helpful prompt if there's no content yet
-			-- Use virt_text on the empty line (which is writable)
-			if not has_content_after_directive and first_line_after_directive <= #lines then
+			-- Use virt_text on the line after the blank line (which is writable)
+			if not has_content_after_directive and prompt_line <= #lines then
 				-- Check if we're not on that line (cursor position)
 				local cursor_line = api.nvim_win_get_cursor(0)[1]
-				if cursor_line ~= first_line_after_directive then
-					api.nvim_buf_set_extmark(bufnr, ns_id, first_line_after_directive - 1, 0, {
+				if cursor_line ~= prompt_line then
+					api.nvim_buf_set_extmark(bufnr, ns_id, prompt_line - 1, 0, {
 						virt_text = { { "Start typing your question here...", "Comment" } },
 						virt_text_pos = "overlay",
 					})
