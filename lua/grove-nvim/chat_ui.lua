@@ -11,9 +11,11 @@ local debounced_update = nil
 -- Icon constants (matching grove-core/tui/theme/icons.go)
 local NERD_ICON_CHAT_QUESTION = "󱜸" -- md-chat_question (U+F1738)
 local NERD_ICON_ROBOT = "󰚩" -- md-robot (U+F06A9)
+local NERD_ICON_PROGRESS = "󰄟" -- md-progress-clock (U+F011F)
 
 local ASCII_ICON_CHAT_QUESTION = "[?]"
 local ASCII_ICON_ROBOT = "[R]"
+local ASCII_ICON_PROGRESS = "[...]"
 
 -- Detect which icon set to use
 local function get_icons()
@@ -22,6 +24,7 @@ local function get_icons()
 		return {
 			user = ASCII_ICON_CHAT_QUESTION,
 			llm = ASCII_ICON_ROBOT,
+			running = ASCII_ICON_PROGRESS,
 		}
 	end
 
@@ -30,6 +33,7 @@ local function get_icons()
 		return {
 			user = ASCII_ICON_CHAT_QUESTION,
 			llm = ASCII_ICON_ROBOT,
+			running = ASCII_ICON_PROGRESS,
 		}
 	end
 
@@ -37,6 +41,7 @@ local function get_icons()
 	return {
 		user = NERD_ICON_CHAT_QUESTION,
 		llm = NERD_ICON_ROBOT,
+		running = NERD_ICON_PROGRESS,
 	}
 end
 
@@ -70,6 +75,10 @@ local function update(bufnr)
 					title = "User Turn"
 					icon = icons.user
 					hl_group = "GroveChatUserTurn"
+				elseif data.id and data.state == "running" then
+					title = "LLM Running"
+					icon = icons.running
+					hl_group = "GroveChatLLMRunning"
 				elseif data.id then
 					title = "LLM Response"
 					icon = icons.llm
@@ -121,6 +130,7 @@ function M.setup(bufnr)
 	vim.cmd("highlight default link GroveChatDivider Comment")
 	vim.cmd("highlight default link GroveChatUserTurn Title")
 	vim.cmd("highlight default link GroveChatLLMTurn Constant")
+	vim.cmd("highlight default link GroveChatLLMRunning WarningMsg")
 
 	if not debounced_update then
 		debounced_update = utils.debounce(200, update)

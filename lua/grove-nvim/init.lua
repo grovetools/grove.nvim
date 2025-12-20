@@ -25,10 +25,53 @@ function M.chat_run(args)
     end
   end
 
-  local buf_path = vim.api.nvim_buf_get_name(0)
+  local bufnr = vim.api.nvim_get_current_buf()
+  local buf_path = vim.api.nvim_buf_get_name(bufnr)
   if buf_path == '' or buf_path == nil then
     vim.notify("Grove: No file name for the current buffer.", vim.log.levels.ERROR)
     return
+  end
+
+  -- Enable chat UI if not already enabled
+  local chat_ui = require("grove-nvim.chat_ui")
+  if not vim.b[bufnr].grove_chat_ui_enabled then
+    chat_ui.setup(bufnr)
+  end
+
+  -- Before running, find the last user turn and insert a "running" state marker
+  -- if there isn't an LLM response there already.
+  local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  local last_user_turn_line = -1
+
+  for i = #lines, 1, -1 do
+    if lines[i]:match('grove:.*"template"') then
+      last_user_turn_line = i
+      break
+    end
+  end
+
+  if last_user_turn_line ~= -1 then
+    local has_response = false
+    -- Check if there's already an LLM response (a grove directive with an id but no template)
+    for i = last_user_turn_line + 1, #lines do
+      local line = lines[i]
+      local json_str = line:match("%s*<!%-%- grove: (.-) %-%->%s*")
+      if json_str then
+        local ok, data = pcall(vim.json.decode, json_str)
+        -- If we found a grove directive with an id (response or running state), don't insert
+        if ok and type(data) == "table" and data.id then
+          has_response = true
+          break
+        end
+      end
+    end
+
+    if not has_response then
+      -- Insert a placeholder "running" directive at the end of the buffer
+      local directive = string.format('<!-- grove: {"id": "pending-%d", "state": "running"} -->', os.time())
+      local line_count = vim.api.nvim_buf_line_count(bufnr)
+      vim.api.nvim_buf_set_lines(bufnr, line_count, line_count, false, {"", directive})
+    end
   end
 
   -- Save the file before running
@@ -69,14 +112,41 @@ function M.chat_run(args)
           spinner_timer = nil
         end
         vim.cmd('silent! redrawstatus')
-        if exit_code == 0 then
-          -- Reload the buffer to show the updated content
-          vim.cmd('silent! checktime')
-          -- Use echo instead of notify to avoid press ENTER prompt
-          vim.api.nvim_echo({{"Grove: Chat completed", "Normal"}}, false, {})
-        else
-          vim.api.nvim_echo({{"Grove: Chat failed with exit code " .. exit_code, "ErrorMsg"}}, false, {})
-        end
+
+        vim.schedule(function()
+          if exit_code == 0 then
+            -- Reload the buffer to show the updated content
+            vim.cmd('silent! checktime')
+
+            -- Remove any orphaned running directives
+            local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+            for i = #lines, 1, -1 do
+              local json_str = lines[i]:match("%s*<!%-%- grove: (.-) %-%->%s*")
+              if json_str then
+                local ok, data = pcall(vim.json.decode, json_str)
+                if ok and type(data) == "table" and data.state == "running" then
+                  -- Remove the running directive and any blank line before it
+                  local start_line = i - 1
+                  if start_line > 0 and lines[start_line]:match("^%s*$") then
+                    -- Remove blank line + directive
+                    vim.api.nvim_buf_set_lines(bufnr, start_line - 1, i, false, {})
+                  else
+                    -- Just remove the directive
+                    vim.api.nvim_buf_set_lines(bufnr, i - 1, i, false, {})
+                  end
+                  -- Save after cleanup
+                  vim.cmd('silent write')
+                  break
+                end
+              end
+            end
+
+            -- Use echo instead of notify to avoid press ENTER prompt
+            vim.api.nvim_echo({{"Grove: Chat completed", "Normal"}}, false, {})
+          else
+            vim.api.nvim_echo({{"Grove: Chat failed with exit code " .. exit_code, "ErrorMsg"}}, false, {})
+          end
+        end)
         running_job = nil
       end,
       on_stderr = function(_, data)
