@@ -25,7 +25,8 @@ local function calculate_row(position, height)
     return 0
   end
   local statusline_height = (vim.o.laststatus > 0) and 1 or 0
-  return vim.o.lines - statusline_height - height
+  local spacing = 2 -- Add 2 lines of space above the statusline
+  return vim.o.lines - statusline_height - height - spacing
 end
 
 local function get_bar_content()
@@ -40,6 +41,10 @@ local function get_bar_content()
       table.insert(plan_part_items, stat.text)
     end
     local plan_part = "Plan: 󰠡 " .. table.concat(plan_part_items, " ")
+    -- Add plan-level model if all jobs use the same model
+    if p_state.plan_model and p_state.plan_model ~= "" then
+      plan_part = plan_part .. " 󰚩 " .. p_state.plan_model
+    end
     table.insert(all_parts, plan_part)
   end
 
@@ -63,6 +68,10 @@ local function get_bar_content()
 
     if #git_parts > 0 then
       local git_part = "Git: 󰊢 " .. table.concat(git_parts, " ")
+      -- Add (worktree) indicator if applicable
+      if p_state.has_worktree then
+        git_part = git_part .. " (worktree)"
+      end
       table.insert(all_parts, git_part)
     end
   end
@@ -74,16 +83,23 @@ local function get_bar_content()
       -- Add job type icon before filename
       local type_icon = p_state.current_job_status.type_icon or ""
       if type_icon ~= "" then
-        job_part = job_part .. type_icon .. " " .. p_state.current_job_status.filename .. " "
+        job_part = job_part .. type_icon .. " " .. p_state.current_job_status.filename
       else
-        job_part = job_part .. p_state.current_job_status.filename .. " "
+        job_part = job_part .. p_state.current_job_status.filename
       end
+      -- Add template if present
+      if p_state.current_job_status.template and p_state.current_job_status.template ~= "" then
+        job_part = job_part .. " (" .. p_state.current_job_status.template .. ")"
+      end
+      job_part = job_part .. " "
     end
     job_part = job_part .. p_state.current_job_status.icon .. " " .. p_state.current_job_status.status
 
-    -- Add model if present
+    -- Add model only if it differs from the plan-level model
     if p_state.current_job_status.model and p_state.current_job_status.model ~= "" then
-      job_part = job_part .. " 󰚩 " .. p_state.current_job_status.model
+      if not p_state.plan_model or p_state.current_job_status.model ~= p_state.plan_model then
+        job_part = job_part .. " 󰚩 " .. p_state.current_job_status.model
+      end
     end
 
     table.insert(all_parts, job_part)
@@ -208,8 +224,10 @@ local function do_refresh()
   vim.api.nvim_buf_clear_namespace(state.buf, 0, 0, -1)
 
   -- Define italic label highlight and non-italic override
-  vim.cmd("highlight default GroveStatusLabel gui=italic cterm=italic")
+  vim.cmd("highlight default GroveStatusLabel guifg=#5c6370 gui=italic ctermfg=243 cterm=italic") -- Muted grey italic
   vim.cmd("highlight default GroveStatusContent gui=NONE cterm=NONE")
+  vim.cmd("highlight default GroveStatusSeparator guifg=#3b4048 ctermfg=237") -- Dark grey separator
+  vim.cmd("highlight default GroveStatusMuted guifg=#5c6370 gui=italic ctermfg=243 cterm=italic") -- Muted grey italic for (worktree) etc
 
   -- Define highlights for git status parts
   vim.cmd("highlight default GroveStatusGitAhead guifg=#61afef") -- Blue/Info
@@ -223,6 +241,16 @@ local function do_refresh()
   for line_idx, padded_content in ipairs(padded_content_lines) do
     local p_state = provider.state
     local current_line_num = line_idx - 1
+
+    -- Highlight separators (│)
+    local sep_start = 0
+    while true do
+      local sep_pos = vim.fn.stridx(string.sub(padded_content, sep_start + 1), "│")
+      if sep_pos < 0 then break end
+      local byte_pos = sep_start + sep_pos
+      vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusSeparator", current_line_num, byte_pos, byte_pos + #"│")
+      sep_start = byte_pos + 1
+    end
 
     -- Highlight current job status icon only
     if p_state.current_job_status and vim.fn.stridx(padded_content, "Job:") >= 0 then
@@ -243,6 +271,15 @@ local function do_refresh()
             byte_start,
             byte_end
           )
+        end
+
+        -- Highlight template in parentheses if present
+        if p_state.current_job_status.template and p_state.current_job_status.template ~= "" then
+          local template_pattern = "(" .. p_state.current_job_status.template .. ")"
+          local template_start = vim.fn.stridx(padded_content, template_pattern)
+          if template_start >= 0 then
+            vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusMuted", current_line_num, template_start, template_start + #template_pattern)
+          end
         end
       end
     end
@@ -284,9 +321,15 @@ local function do_refresh()
         local rules_byte_start = vim.fn.stridx(padded_content, rules_pattern)
         if rules_byte_start >= 0 then
           local rules_byte_end = rules_byte_start + #rules_pattern
-          vim.api.nvim_buf_add_highlight(state.buf, 0, "Comment", current_line_num, rules_byte_start, rules_byte_end)
+          vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusMuted", current_line_num, rules_byte_start, rules_byte_end)
         end
       end
+    end
+
+    -- Highlight (worktree) text in plan section
+    local worktree_start = vim.fn.stridx(padded_content, "(worktree)")
+    if worktree_start >= 0 then
+      vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusMuted", current_line_num, worktree_start, worktree_start + #"(worktree)")
     end
 
     -- Apply labels
@@ -358,8 +401,8 @@ function M.show()
     zindex = 50,
   })
 
-  -- Link border to a theme-aware group
-  vim.cmd("highlight default link GroveStatusBarBorder Comment")
+  -- Set border to dark grey
+  vim.cmd("highlight default GroveStatusBarBorder guifg=#3b4048 ctermfg=237")
   vim.wo[state.win].winhighlight = "Normal:StatusLine,FloatBorder:GroveStatusBarBorder"
 
   -- Handle window resizing

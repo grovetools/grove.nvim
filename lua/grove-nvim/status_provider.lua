@@ -215,6 +215,7 @@ local function update_current_job_status()
           filename = found_job.filename or "",
           type_icon = type_icon,
           model = found_job.model or "",
+          template = found_job.template or "",
         }
       end
 
@@ -278,21 +279,33 @@ local function update_plan_status()
           local colored_stats = {}
 
           -- Add plan name first (no color)
-          -- Check if any job is in a worktree
           if plan_data.plan then
-            local has_worktree = false
+            table.insert(colored_stats, { text = plan_data.plan, hl = "Normal" })
+          end
+
+          -- Check if any job is in a worktree (will be shown in git section)
+          M.state.has_worktree = false
+          for _, job in ipairs(plan_data.jobs) do
+            if job.worktree and job.worktree ~= "" then
+              M.state.has_worktree = true
+              break
+            end
+          end
+
+          -- Check if all jobs have the same model (plan-level model)
+          M.state.plan_model = nil
+          if #plan_data.jobs > 0 then
+            local first_model = plan_data.jobs[1].model
+            local all_same = true
             for _, job in ipairs(plan_data.jobs) do
-              if job.worktree and job.worktree ~= "" then
-                has_worktree = true
+              if job.model ~= first_model then
+                all_same = false
                 break
               end
             end
-
-            local plan_text = plan_data.plan
-            if has_worktree then
-              plan_text = plan_text .. " (worktree)"
+            if all_same and first_model and first_model ~= "" then
+              M.state.plan_model = first_model
             end
-            table.insert(colored_stats, { text = plan_text, hl = "Normal" })
           end
 
           if completed > 0 then
