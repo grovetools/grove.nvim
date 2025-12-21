@@ -11,14 +11,59 @@ local spinner_timer = nil
 local highlights_defined = false
 local function setup_highlights()
   if highlights_defined then return end
-  -- Context token highlights - link but explicitly set gui=NONE to prevent italic
-  vim.cmd("highlight default link GroveCtxTokens0 Normal")
-  vim.cmd("highlight default link GroveCtxTokens1 Comment")
-  vim.cmd("highlight default link GroveCtxTokens2 DiagnosticInfo")
-  vim.cmd("highlight default link GroveCtxTokens3 String")
-  vim.cmd("highlight default link GroveCtxTokens4 DiagnosticWarn")
-  vim.cmd("highlight default link GroveCtxTokens5 DiagnosticError")
-  vim.cmd("highlight default link GroveCtxTokensWarn ErrorMsg")
+
+  -- Get colors from linked groups but strip italic/bold styling
+  local function get_fg(hl_name)
+    local hl = vim.api.nvim_get_hl(0, { name = hl_name })
+    return hl.fg
+  end
+
+  -- Context token highlights - copy colors but force gui=NONE to prevent italic
+  vim.cmd("highlight default GroveCtxTokens0 gui=NONE cterm=NONE")
+
+  local comment_fg = get_fg("Comment")
+  local info_fg = get_fg("DiagnosticInfo")
+  local string_fg = get_fg("String")
+  local warn_fg = get_fg("DiagnosticWarn")
+  local error_fg = get_fg("DiagnosticError")
+  local errormsg_fg = get_fg("ErrorMsg")
+
+  if comment_fg then
+    vim.cmd(string.format("highlight default GroveCtxTokens1 guifg=#%06x gui=NONE cterm=NONE", comment_fg))
+  else
+    vim.cmd("highlight default link GroveCtxTokens1 Comment")
+  end
+
+  if info_fg then
+    vim.cmd(string.format("highlight default GroveCtxTokens2 guifg=#%06x gui=NONE cterm=NONE", info_fg))
+  else
+    vim.cmd("highlight default link GroveCtxTokens2 DiagnosticInfo")
+  end
+
+  if string_fg then
+    vim.cmd(string.format("highlight default GroveCtxTokens3 guifg=#%06x gui=NONE cterm=NONE", string_fg))
+  else
+    vim.cmd("highlight default link GroveCtxTokens3 String")
+  end
+
+  if warn_fg then
+    vim.cmd(string.format("highlight default GroveCtxTokens4 guifg=#%06x gui=NONE cterm=NONE", warn_fg))
+  else
+    vim.cmd("highlight default link GroveCtxTokens4 DiagnosticWarn")
+  end
+
+  if error_fg then
+    vim.cmd(string.format("highlight default GroveCtxTokens5 guifg=#%06x gui=NONE cterm=NONE", error_fg))
+  else
+    vim.cmd("highlight default link GroveCtxTokens5 DiagnosticError")
+  end
+
+  if errormsg_fg then
+    vim.cmd(string.format("highlight default GroveCtxTokensWarn guifg=#%06x gui=NONE cterm=NONE", errormsg_fg))
+  else
+    vim.cmd("highlight default link GroveCtxTokensWarn ErrorMsg")
+  end
+
   highlights_defined = true
 end
 
