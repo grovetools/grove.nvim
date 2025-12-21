@@ -359,13 +359,34 @@ function M.current_job_status_component()
     function()
       local status = provider.state.current_job_status
       if not status then return "" end
-      -- Ultra minimal: just type icon and status icon
+
+      local cfg = config.options.ui.lualine.job
       local parts = {}
-      if status.type_icon and status.type_icon ~= "" then
+
+      -- Filename
+      if cfg.show_filename and status.filename and status.filename ~= "" then
+        table.insert(parts, status.filename)
+      end
+
+      -- Type icon
+      if cfg.show_type_icon and status.type_icon and status.type_icon ~= "" then
         table.insert(parts, status.type_icon)
       end
-      -- Highlight only the status icon
-      table.insert(parts, string.format("%%#%s#%s%%*", status.icon_hl, status.icon))
+
+      -- Status icon
+      if cfg.show_status then
+        table.insert(parts, string.format("%%#%s#%s%%*", status.icon_hl, status.icon))
+      end
+
+      -- Model
+      if cfg.show_model and status.model and status.model ~= "" then
+        table.insert(parts, "󰚩 " .. status.model)
+      end
+
+      -- Template
+      if cfg.show_template and status.template and status.template ~= "" then
+        table.insert(parts, "(" .. status.template .. ")")
+      end
 
       return table.concat(parts, " ")
     end,
@@ -386,9 +407,19 @@ function M.context_size_component()
     function()
       local cache = provider.state.context_size
       if type(cache) == "table" and cache.display then
-        -- Minimal: just icon and value, no label
-        local ctx_display = cache.display:gsub("^cx:", "")
-        return string.format("󰄨 %%#%s#%s%%*", cache.hl_group, ctx_display)
+        local cfg = config.options.ui.lualine.context
+        local parts = {}
+
+        if cfg.show_label then
+          table.insert(parts, "Context:")
+        end
+
+        if cfg.show_size then
+          local ctx_display = cache.display:gsub("^cx:", "")
+          table.insert(parts, string.format("󰄨 %%#%s#%s%%*", cache.hl_group, ctx_display))
+        end
+
+        return table.concat(parts, " ")
       end
       return ""
     end,
@@ -405,13 +436,25 @@ end
 function M.rules_file_component()
   return {
     function()
-      -- Not shown in minimal mode - context size component is enough
+      local cfg = config.options.ui.lualine.rules
+      if not cfg.show then
+        return ""
+      end
+
+      if provider.state.rules_file and provider.state.rules_file ~= "" then
+        if cfg.show_filename then
+          return provider.state.rules_file
+        else
+          return "󱁂"  -- Just show icon
+        end
+      end
       return ""
     end,
     cond = function()
       -- Hide if native status bar is enabled
       if config.options.ui.status_bar.enable then return false end
-      return false  -- Always hidden in minimal mode
+      local cfg = config.options.ui.lualine.rules
+      return cfg.show and vim.bo.filetype == 'markdown'
     end,
   }
 end
@@ -426,21 +469,26 @@ function M.plan_status_component()
         return ""
       end
 
-      -- Ultra minimal: just icon and numeric stats (skip plan name)
+      local cfg = config.options.ui.lualine.plan
       local parts = {}
+
       for i, stat in ipairs(stats) do
-        -- Skip the first item if it's the plan name (no color highlighting)
-        if stat.hl ~= "Normal" then
-          if #parts > 0 then
-            table.insert(parts, " ")
+        -- First item is plan name (hl = "Normal")
+        if stat.hl == "Normal" then
+          if cfg.show_name then
+            table.insert(parts, stat.text)
           end
-          -- Use %#HlGroup# syntax for inline highlighting
-          table.insert(parts, "%#" .. stat.hl .. "#" .. stat.text .. "%*")
+        else
+          -- Numeric stats
+          if cfg.show_stats then
+            -- Use %#HlGroup# syntax for inline highlighting
+            table.insert(parts, "%#" .. stat.hl .. "#" .. stat.text .. "%*")
+          end
         end
       end
 
       if #parts > 0 then
-        return "󰠡 " .. table.concat(parts)
+        return "󰠡 " .. table.concat(parts, " ")
       end
       return ""
     end,
@@ -651,6 +699,7 @@ function M.git_changes_component()
         return ""
       end
 
+      local cfg = config.options.ui.lualine.git
       local parts = {}
       local highlights = {
         info = "DiagnosticInfo",
@@ -687,7 +736,12 @@ function M.git_changes_component()
         add_part("✓", "ok")
       end
 
-      return "󰊢 " .. table.concat(parts, " ")
+      local result = table.concat(parts, " ")
+      if cfg.show_label then
+        return "Git: 󰊢 " .. result
+      else
+        return "󰊢 " .. result
+      end
     end,
     cond = function()
       -- Hide if native status bar is enabled
