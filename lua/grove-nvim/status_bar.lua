@@ -60,6 +60,12 @@ local function get_bar_content()
       end
     end
     job_part = job_part .. p_state.current_job_status.icon .. " " .. p_state.current_job_status.status
+
+    -- Add model if present
+    if p_state.current_job_status.model and p_state.current_job_status.model ~= "" then
+      job_part = job_part .. " 󰚩 " .. p_state.current_job_status.model
+    end
+
     table.insert(parts, job_part)
   end
 

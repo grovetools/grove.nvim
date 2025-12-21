@@ -373,6 +373,12 @@ function M.current_job_status_component()
       end
       -- Highlight only the icon, leave status text in default color
       job_part = job_part .. string.format("%%#%s#%s%%* %s", status.icon_hl, status.icon, status.status)
+
+      -- Add model if present
+      if status.model and status.model ~= "" then
+        job_part = job_part .. " 󰚩 " .. status.model
+      end
+
       return job_part
     end,
     cond = function()

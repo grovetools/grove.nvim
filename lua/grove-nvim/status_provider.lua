@@ -213,6 +213,7 @@ local function update_current_job_status()
           status = found_job.status,
           filename = found_job.filename or "",
           type_icon = type_icon,
+          model = found_job.model or "",
         }
       end
 
