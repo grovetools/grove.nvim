@@ -109,10 +109,46 @@ local function get_bar_content()
   local max_width = vim.o.columns * 0.8
 
   if total_width > max_width and #all_parts > 1 then
-    local split_at = math.ceil(#all_parts / 2)
-    local line1_parts = { table.unpack(all_parts, 1, split_at) }
-    local line2_parts = { table.unpack(all_parts, split_at + 1) }
-    return { table.concat(line1_parts, "  │  "), table.concat(line2_parts, "  │  ") }
+    -- Smart split: Line 1 gets Plan + Git, Line 2 gets Job + Context
+    -- This maintains logical grouping when we have all 4 components
+    local split_at = 2 -- Split after 2nd component (Plan, Git)
+
+    if #all_parts >= 4 then
+      -- We have all 4 components: Plan, Git, Job, Context
+      -- Format as: "Plan  │  Git" and "Job  │  Context"
+      -- with the │ separators aligned vertically
+      local line1_left = all_parts[1]  -- Plan
+      local line1_right = all_parts[2] -- Git
+      local line2_left = all_parts[3]  -- Job
+      local line2_right = all_parts[4] -- Context
+
+      -- Calculate widths
+      local line1_left_width = vim.fn.strdisplaywidth(line1_left)
+      local line2_left_width = vim.fn.strdisplaywidth(line2_left)
+      local max_left_width = math.max(line1_left_width, line2_left_width)
+
+      -- Pad left sections to align the │ separator
+      local line1_left_padded = line1_left .. string.rep(" ", max_left_width - line1_left_width)
+      local line2_left_padded = line2_left .. string.rep(" ", max_left_width - line2_left_width)
+
+      return {
+        line1_left_padded .. "  │  " .. line1_right,
+        line2_left_padded .. "  │  " .. line2_right
+      }
+    else
+      -- Fallback for fewer than 4 components
+      local line1_parts = { table.unpack(all_parts, 1, math.min(split_at, #all_parts)) }
+      local line2_parts = {}
+      if #all_parts > split_at then
+        line2_parts = { table.unpack(all_parts, split_at + 1) }
+      end
+
+      if #line2_parts > 0 then
+        return { table.concat(line1_parts, "  │  "), table.concat(line2_parts, "  │  ") }
+      else
+        return { table.concat(line1_parts, "  │  ") }
+      end
+    end
   else
     return { single_line }
   end
@@ -135,11 +171,18 @@ local function do_refresh()
     vim.api.nvim_win_set_config(state.win, { hide = false })
   end
 
-  local padded_content_lines = {}
+  -- Find max line width first
   local max_line_width = 0
   for _, line in ipairs(content_lines) do
-    table.insert(padded_content_lines, " " .. line)
     max_line_width = math.max(max_line_width, vim.fn.strdisplaywidth(line))
+  end
+
+  -- Pad all lines to max width and add left padding
+  local padded_content_lines = {}
+  for _, line in ipairs(content_lines) do
+    local line_width = vim.fn.strdisplaywidth(line)
+    local padding = string.rep(" ", max_line_width - line_width)
+    table.insert(padded_content_lines, " " .. line .. padding)
   end
 
   vim.api.nvim_buf_set_option(state.buf, "modifiable", true)
