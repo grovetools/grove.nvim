@@ -178,19 +178,18 @@ local function do_refresh()
 
     -- Highlight rules file in parens (muted & italic)
     if p_state.rules_file then
-        local rules_pattern = "(" .. p_state.rules_file .. ")"
-        local rules_byte_start = vim.fn.stridx(padded_content, rules_pattern)
-        if rules_byte_start >= 0 then
-          local rules_byte_end = rules_byte_start + #rules_pattern
-          vim.api.nvim_buf_add_highlight(
-            state.buf,
-            0,
-            "Comment",
-            0,
-            rules_byte_start,
-            rules_byte_end
-          )
-        end
+      local rules_pattern = "(" .. p_state.rules_file .. ")"
+      local rules_byte_start = vim.fn.stridx(padded_content, rules_pattern)
+      if rules_byte_start >= 0 then
+        local rules_byte_end = rules_byte_start + #rules_pattern
+        vim.api.nvim_buf_add_highlight(
+          state.buf,
+          0,
+          "Comment",
+          0,
+          rules_byte_start,
+          rules_byte_end
+        )
       end
     end
   end
