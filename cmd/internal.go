@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/mattsolo1/grove-core/config"
+	"github.com/mattsolo1/grove-core/git"
 	"github.com/mattsolo1/grove-core/util/pathutil"
 	"github.com/mattsolo1/grove-core/pkg/workspace"
 	"github.com/sirupsen/logrus"
@@ -75,6 +76,7 @@ func newInternalCmd() *cobra.Command {
 		Hidden: true, // Hide from standard help output
 	}
 	cmd.AddCommand(newResolveAliasesCmd())
+	cmd.AddCommand(newGitStatusCmd())
 	return cmd
 }
 
@@ -215,6 +217,44 @@ func newResolveAliasesCmd() *cobra.Command {
 			}
 			fmt.Println(string(jsonOutput))
 
+			return nil
+		},
+	}
+}
+
+func newGitStatusCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "git-status [path]",
+		Short: "Get extended git status for a path",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := ""
+			if len(args) > 0 {
+				path = args[0]
+			} else {
+				var err error
+				path, err = os.Getwd()
+				if err != nil {
+					// On error, print empty JSON and exit cleanly
+					fmt.Println("{}")
+					return nil
+				}
+			}
+
+			status, err := git.GetExtendedStatus(path)
+			if err != nil {
+				// Not a git repo or other error, print empty JSON and exit cleanly
+				fmt.Println("{}")
+				return nil
+			}
+
+			jsonOutput, err := json.Marshal(status)
+			if err != nil {
+				// Should not happen, but handle gracefully
+				fmt.Println("{}")
+				return nil
+			}
+			fmt.Println(string(jsonOutput))
 			return nil
 		},
 	}

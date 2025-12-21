@@ -5,6 +5,7 @@ M.state = {
   rules_file = nil,
   plan_status = nil,
   current_job_status = nil, -- New: { text = "󰔟 running", hl = "DiagnosticInfo" }
+  git_status = nil,
 }
 
 local timers = {}
@@ -348,6 +349,47 @@ local function update_plan_status()
   })
 end
 
+-- Update git status cache
+local function update_git_status()
+  local neogrove_path = vim.fn.exepath("neogrove")
+  if neogrove_path == "" then
+    return
+  end
+
+  local cwd = vim.fn.getcwd()
+
+  -- Run neogrove internal git-status asynchronously
+  vim.fn.jobstart({ neogrove_path, "internal", "git-status", cwd }, {
+    stdout_buffered = true,
+    on_stdout = function(_, data)
+      if data then
+        local stdout = table.concat(data, "\n")
+        local ok, status = pcall(vim.json.decode, stdout)
+
+        if ok and status then
+          -- Check if status object is empty (not a git repo)
+          if vim.tbl_isempty(status) then
+            if M.state.git_status ~= nil then
+              M.state.git_status = nil
+              notify_update()
+            end
+            return
+          end
+
+          local has_changed = vim.json.encode(status) ~= vim.json.encode(M.state.git_status)
+          M.state.git_status = status
+          if has_changed then
+            notify_update()
+          end
+        end
+      end
+    end,
+    on_stderr = function()
+      -- Silently ignore stderr
+    end,
+  })
+end
+
 function M.start()
   if timers.context then return end -- Already running
 
@@ -356,12 +398,14 @@ function M.start()
   update_rules_file()
   update_plan_status()
   update_current_job_status()
+  update_git_status()
 
   -- Start timers
   timers.context = vim.fn.timer_start(5000, update_context_size, { ['repeat'] = -1 })
   timers.rules = vim.fn.timer_start(5000, update_rules_file, { ['repeat'] = -1 })
   timers.plan = vim.fn.timer_start(2000, update_plan_status, { ['repeat'] = -1 })
   timers.job = vim.fn.timer_start(3000, update_current_job_status, { ['repeat'] = -1 })
+  timers.git = vim.fn.timer_start(3000, update_git_status, { ['repeat'] = -1 })
 
   -- Update context size when rules file is written
   vim.api.nvim_create_autocmd("BufWritePost", {
@@ -390,6 +434,13 @@ function M.start()
     callback = function()
       update_rules_file()
       vim.defer_fn(update_context_size, 100)
+    end,
+  })
+
+  -- Update git status on directory changes
+  vim.api.nvim_create_autocmd({ "DirChanged", "BufEnter" }, {
+    callback = function()
+      update_git_status()
     end,
   })
 end

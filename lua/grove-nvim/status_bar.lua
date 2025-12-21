@@ -80,6 +80,29 @@ local function get_bar_content()
     table.insert(parts, ctx_part)
   end
 
+  -- Git status
+  if p_state.git_status and p_state.git_status.is_dirty then
+    local git_parts = {}
+    local status = p_state.git_status
+    local is_main = status.branch == "main" or status.branch == "master"
+    if not is_main and (status.ahead_main_count > 0 or status.behind_main_count > 0) then
+      if status.ahead_main_count > 0 then table.insert(git_parts, "⇡" .. status.ahead_main_count) end
+      if status.behind_main_count > 0 then table.insert(git_parts, "⇣" .. status.behind_main_count) end
+    elseif status.has_upstream then
+      if status.ahead_count > 0 then table.insert(git_parts, "↑" .. status.ahead_count) end
+      if status.behind_count > 0 then table.insert(git_parts, "↓" .. status.behind_count) end
+    end
+    if status.modified_count > 0 then table.insert(git_parts, "M:" .. status.modified_count) end
+    if status.staged_count > 0 then table.insert(git_parts, "S:" .. status.staged_count) end
+    if status.untracked_count > 0 then table.insert(git_parts, "?:" .. status.untracked_count) end
+    if status.lines_added > 0 then table.insert(git_parts, "+" .. status.lines_added) end
+    if status.lines_deleted > 0 then table.insert(git_parts, "-" .. status.lines_deleted) end
+
+    if #git_parts > 0 then
+      table.insert(parts, "Git: 󰊢 " .. table.concat(git_parts, " "))
+    end
+  end
+
   return table.concat(parts, "  │  ")
 end
 
@@ -128,6 +151,15 @@ local function do_refresh()
   -- Define italic label highlight and non-italic override
   vim.cmd("highlight default GroveStatusLabel gui=italic cterm=italic")
   vim.cmd("highlight default GroveStatusContent gui=NONE cterm=NONE")
+
+  -- Define highlights for git status parts
+  vim.cmd("highlight default GroveStatusGitAhead guifg=#61afef") -- Blue/Info
+  vim.cmd("highlight default GroveStatusGitBehind guifg=#e06c75") -- Red/Error
+  vim.cmd("highlight default GroveStatusGitModified guifg=#d19a66") -- Orange/Warn
+  vim.cmd("highlight default GroveStatusGitStaged guifg=#61afef") -- Blue/Info
+  vim.cmd("highlight default GroveStatusGitUntracked guifg=#e06c75") -- Red/Error
+  vim.cmd("highlight default GroveStatusGitAdded guifg=#98c379") -- Green/Add
+  vim.cmd("highlight default GroveStatusGitDeleted guifg=#e06c75") -- Red/Delete
 
   -- Apply highlights using byte positions (accounting for left padding)
   local p_state = provider.state
@@ -236,6 +268,84 @@ local function do_refresh()
     local label_start = vim.fn.stridx(padded_content, "Context:")
     if label_start >= 0 then
       vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusLabel", 0, label_start, label_start + #"Context:")
+    end
+  end
+
+  -- Highlight git status parts
+  if p_state.git_status and p_state.git_status.is_dirty then
+    local status = p_state.git_status
+    local is_main = status.branch == "main" or status.branch == "master"
+    if not is_main and (status.ahead_main_count > 0 or status.behind_main_count > 0) then
+      if status.ahead_main_count > 0 then
+        local pattern = "⇡" .. status.ahead_main_count
+        local start = vim.fn.stridx(padded_content, pattern)
+        if start >= 0 then
+          vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusGitAhead", 0, start, start + #pattern)
+        end
+      end
+      if status.behind_main_count > 0 then
+        local pattern = "⇣" .. status.behind_main_count
+        local start = vim.fn.stridx(padded_content, pattern)
+        if start >= 0 then
+          vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusGitBehind", 0, start, start + #pattern)
+        end
+      end
+    elseif status.has_upstream then
+       if status.ahead_count > 0 then
+        local pattern = "↑" .. status.ahead_count
+        local start = vim.fn.stridx(padded_content, pattern)
+        if start >= 0 then
+          vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusGitAhead", 0, start, start + #pattern)
+        end
+      end
+      if status.behind_count > 0 then
+        local pattern = "↓" .. status.behind_count
+        local start = vim.fn.stridx(padded_content, pattern)
+        if start >= 0 then
+          vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusGitBehind", 0, start, start + #pattern)
+        end
+      end
+    end
+    if status.modified_count > 0 then
+      local pattern = "M:" .. status.modified_count
+      local start = vim.fn.stridx(padded_content, pattern)
+      if start >= 0 then
+        vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusGitModified", 0, start, start + #pattern)
+      end
+    end
+    if status.staged_count > 0 then
+      local pattern = "S:" .. status.staged_count
+      local start = vim.fn.stridx(padded_content, pattern)
+      if start >= 0 then
+        vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusGitStaged", 0, start, start + #pattern)
+      end
+    end
+    if status.untracked_count > 0 then
+      local pattern = "?:" .. status.untracked_count
+      local start = vim.fn.stridx(padded_content, pattern)
+      if start >= 0 then
+        vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusGitUntracked", 0, start, start + #pattern)
+      end
+    end
+    if status.lines_added > 0 then
+      local pattern = "+" .. status.lines_added
+      local start = vim.fn.stridx(padded_content, pattern)
+      if start >= 0 then
+        vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusGitAdded", 0, start, start + #pattern)
+      end
+    end
+    if status.lines_deleted > 0 then
+      local pattern = "-" .. status.lines_deleted
+      local start = vim.fn.stridx(padded_content, pattern)
+      if start >= 0 then
+        vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusGitDeleted", 0, start, start + #pattern)
+      end
+    end
+
+    -- Highlight "Git:" label
+    local label_start = vim.fn.stridx(padded_content, "Git:")
+    if label_start >= 0 then
+      vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusLabel", 0, label_start, label_start + #"Git:")
     end
   end
 end
