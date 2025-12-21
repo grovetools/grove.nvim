@@ -17,7 +17,8 @@ local function get_bottom_offset()
   local status_bar_at_bottom = config.options.ui.status_bar.position == 'bottom'
   local status_bar_offset = (status_bar_enabled and status_bar_at_bottom) and 1 or 0
 
-  return statusline_offset + status_bar_offset + 1
+  -- Add extra lines to prevent overlap with lualine/statusline
+  return statusline_offset + status_bar_offset + 3
 end
 
 -- Expose for other modules to use
@@ -50,7 +51,13 @@ local function get_bar_content()
   if p_state.current_job_status then
     local job_part = "Job: "
     if p_state.current_job_status.filename ~= "" then
-      job_part = job_part .. p_state.current_job_status.filename .. " "
+      -- Add job type icon before filename
+      local type_icon = p_state.current_job_status.type_icon or ""
+      if type_icon ~= "" then
+        job_part = job_part .. type_icon .. " " .. p_state.current_job_status.filename .. " "
+      else
+        job_part = job_part .. p_state.current_job_status.filename .. " "
+      end
     end
     job_part = job_part .. p_state.current_job_status.icon .. " " .. p_state.current_job_status.status
     table.insert(parts, job_part)
@@ -123,19 +130,26 @@ local function do_refresh()
 
   -- Highlight current job status icon only
   if p_state.current_job_status then
-    local icon = p_state.current_job_status.icon
-    -- Use stridx to get byte position in padded_content
-    local byte_start = vim.fn.stridx(padded_content, icon)
-    if byte_start >= 0 then
-      local byte_end = byte_start + #icon
-      vim.api.nvim_buf_add_highlight(
-        state.buf,
-        0,
-        p_state.current_job_status.icon_hl,
-        0,
-        byte_start,
-        byte_end
-      )
+    -- Find the "Job:" label first, then find the status icon after it
+    local job_label_start = vim.fn.stridx(padded_content, "Job:")
+    if job_label_start >= 0 then
+      local icon = p_state.current_job_status.icon
+      -- Search for icon after the Job: label
+      local search_start = job_label_start + #"Job:"
+      local remaining_content = string.sub(padded_content, search_start + 1)
+      local icon_pos = vim.fn.stridx(remaining_content, icon)
+      if icon_pos >= 0 then
+        local byte_start = search_start + icon_pos
+        local byte_end = byte_start + #icon
+        vim.api.nvim_buf_add_highlight(
+          state.buf,
+          0,
+          p_state.current_job_status.icon_hl,
+          0,
+          byte_start,
+          byte_end
+        )
+      end
     end
   end
 

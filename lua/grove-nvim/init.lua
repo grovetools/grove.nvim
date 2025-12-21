@@ -359,11 +359,17 @@ function M.current_job_status_component()
     function()
       local status = provider.state.current_job_status
       if not status then return "" end
-      -- Show "Job:" label, filename (if available), then icon + status
+      -- Show "Job:" label, type icon, filename (if available), then icon + status
       local parts = {}
       local job_part = "Job: "
       if status.filename and status.filename ~= "" then
-        job_part = job_part .. status.filename .. " "
+        -- Add job type icon before filename
+        local type_icon = status.type_icon or ""
+        if type_icon ~= "" then
+          job_part = job_part .. type_icon .. " " .. status.filename .. " "
+        else
+          job_part = job_part .. status.filename .. " "
+        end
       end
       -- Highlight only the icon, leave status text in default color
       job_part = job_part .. string.format("%%#%s#%s%%* %s", status.icon_hl, status.icon, status.status)

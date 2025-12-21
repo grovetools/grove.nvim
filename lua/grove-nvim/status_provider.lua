@@ -11,20 +11,29 @@ local timers = {}
 local last_md_buffer = nil  -- Track the last markdown buffer for context updates
 
 -- A mapping from flow status strings to UI elements
--- Colors match grove-flow TUI theme
+-- Colors match grove-flow TUI theme (Success=green, Info=blue, Error=red, Warning=orange, Highlight=yellow, Muted=gray, Magenta=magenta)
 local status_map = {
-  completed = { icon = "󰄳", icon_hl = "DiagnosticOk" },
-  running = { icon = "󰔟", icon_hl = "DiagnosticInfo" },
-  failed = { icon = "", icon_hl = "DiagnosticError" },
-  pending = { icon = "󰄱", icon_hl = "Comment" },
-  pending_user = { icon = "󰭻", icon_hl = "Comment" },
-  pending_llm = { icon = "󰭻", icon_hl = "Comment" },
-  blocked = { icon = "", icon_hl = "DiagnosticError" },
-  needs_review = { icon = "", icon_hl = "DiagnosticInfo" },
-  hold = { icon = "󰏧", icon_hl = "DiagnosticWarn" },
-  abandoned = { icon = "󰩹", icon_hl = "Comment" },
-  interrupted = { icon = "", icon_hl = "DiagnosticWarn" },
-  todo = { icon = "󰄱", icon_hl = "Comment" },
+  completed = { icon = "󰄳", icon_hl = "DiagnosticOk" },        -- Success (green)
+  running = { icon = "󰔟", icon_hl = "DiagnosticInfo" },         -- Info (blue)
+  failed = { icon = "", icon_hl = "DiagnosticError" },          -- Error (red)
+  pending = { icon = "󰄱", icon_hl = "DiagnosticWarn" },         -- Warning (yellow/orange)
+  pending_user = { icon = "󰭻", icon_hl = "DiagnosticWarn" },    -- Warning (yellow/orange)
+  pending_llm = { icon = "󰭻", icon_hl = "DiagnosticWarn" },     -- Warning (yellow/orange)
+  blocked = { icon = "", icon_hl = "DiagnosticError" },         -- Error (red)
+  needs_review = { icon = "", icon_hl = "DiagnosticInfo" },     -- Info (blue)
+  hold = { icon = "󰏧", icon_hl = "DiagnosticWarn" },            -- Warning (orange)
+  abandoned = { icon = "󰩹", icon_hl = "Comment" },              -- Muted (gray)
+  interrupted = { icon = "", icon_hl = "Special" },             -- Magenta
+  todo = { icon = "󰄱", icon_hl = "Comment" },                   -- Muted (gray)
+}
+
+-- A mapping from job type to icon (matches grove-flow)
+local job_type_icons = {
+  interactive_agent = "󰍉",
+  headless_agent = "󰭆",
+  chat = "󰭹",
+  oneshot = "",
+  shell = "",
 }
 
 local function notify_update()
@@ -197,11 +206,13 @@ local function update_current_job_status()
       local new_status = nil
       if found_job then
         local ui_info = status_map[found_job.status] or { icon = "", icon_hl = "Comment" }
+        local type_icon = job_type_icons[found_job.type] or job_type_icons.chat
         new_status = {
           icon = ui_info.icon,
           icon_hl = ui_info.icon_hl,
           status = found_job.status,
           filename = found_job.filename or "",
+          type_icon = type_icon,
         }
       end
 
@@ -265,8 +276,21 @@ local function update_plan_status()
           local colored_stats = {}
 
           -- Add plan name first (no color)
+          -- Check if any job is in a worktree
           if plan_data.plan then
-            table.insert(colored_stats, { text = plan_data.plan, hl = "Normal" })
+            local has_worktree = false
+            for _, job in ipairs(plan_data.jobs) do
+              if job.worktree and job.worktree ~= "" then
+                has_worktree = true
+                break
+              end
+            end
+
+            local plan_text = plan_data.plan
+            if has_worktree then
+              plan_text = plan_text .. " (worktree)"
+            end
+            table.insert(colored_stats, { text = plan_text, hl = "Normal" })
           end
 
           if completed > 0 then
