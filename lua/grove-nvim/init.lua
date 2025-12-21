@@ -648,7 +648,7 @@ function M.git_changes_component()
   return {
     function()
       local status = provider.state.git_status
-      if not status or not status.is_dirty then
+      if not status then
         return ""
       end
 
@@ -660,34 +660,40 @@ function M.git_changes_component()
         add = "DiffAdd",
         delete = "DiffDelete",
         normal = "Normal",
+        ok = "DiagnosticOk",
       }
 
       local function add_part(text, hl_key)
         table.insert(parts, string.format("%%#%s#%s%%*", highlights[hl_key] or highlights.normal, text))
       end
 
-      local is_main = status.branch == "main" or status.branch == "master"
-      if not is_main and (status.ahead_main_count > 0 or status.behind_main_count > 0) then
-        if status.ahead_main_count > 0 then add_part("⇡" .. status.ahead_main_count, "info") end
-        if status.behind_main_count > 0 then add_part("⇣" .. status.behind_main_count, "error") end
-      elseif status.has_upstream then
-        if status.ahead_count > 0 then add_part("↑" .. status.ahead_count, "info") end
-        if status.behind_count > 0 then add_part("↓" .. status.behind_count, "error") end
+      if status.is_dirty then
+        local is_main = status.branch == "main" or status.branch == "master"
+        if not is_main and (status.ahead_main_count > 0 or status.behind_main_count > 0) then
+          if status.ahead_main_count > 0 then add_part("⇡" .. status.ahead_main_count, "info") end
+          if status.behind_main_count > 0 then add_part("⇣" .. status.behind_main_count, "error") end
+        elseif status.has_upstream then
+          if status.ahead_count > 0 then add_part("↑" .. status.ahead_count, "info") end
+          if status.behind_count > 0 then add_part("↓" .. status.behind_count, "error") end
+        end
+
+        if status.modified_count > 0 then add_part("M:" .. status.modified_count, "warn") end
+        if status.staged_count > 0 then add_part("S:" .. status.staged_count, "info") end
+        if status.untracked_count > 0 then add_part("?:" .. status.untracked_count, "error") end
+
+        if status.lines_added > 0 then add_part("+" .. status.lines_added, "add") end
+        if status.lines_deleted > 0 then add_part("-" .. status.lines_deleted, "delete") end
+      else
+        -- Show checkmark when clean
+        add_part("✓", "ok")
       end
-
-      if status.modified_count > 0 then add_part("M:" .. status.modified_count, "warn") end
-      if status.staged_count > 0 then add_part("S:" .. status.staged_count, "info") end
-      if status.untracked_count > 0 then add_part("?:" .. status.untracked_count, "error") end
-
-      if status.lines_added > 0 then add_part("+" .. status.lines_added, "add") end
-      if status.lines_deleted > 0 then add_part("-" .. status.lines_deleted, "delete") end
 
       return "󰊢 " .. table.concat(parts, " ")
     end,
     cond = function()
       -- Hide if native status bar is enabled
       if config.options.ui.status_bar.enable then return false end
-      return provider.state.git_status ~= nil and provider.state.git_status.is_dirty
+      return provider.state.git_status ~= nil
     end,
   }
 end

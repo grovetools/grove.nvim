@@ -49,22 +49,29 @@ local function get_bar_content()
   end
 
   -- Git status
-  if p_state.git_status and p_state.git_status.is_dirty then
-    local git_parts = {}
+  if p_state.git_status then
     local status = p_state.git_status
-    local is_main = status.branch == "main" or status.branch == "master"
-    if not is_main and (status.ahead_main_count > 0 or status.behind_main_count > 0) then
-      if status.ahead_main_count > 0 then table.insert(git_parts, "⇡" .. status.ahead_main_count) end
-      if status.behind_main_count > 0 then table.insert(git_parts, "⇣" .. status.behind_main_count) end
-    elseif status.has_upstream then
-      if status.ahead_count > 0 then table.insert(git_parts, "↑" .. status.ahead_count) end
-      if status.behind_count > 0 then table.insert(git_parts, "↓" .. status.behind_count) end
+    local git_parts = {}
+
+    if status.is_dirty then
+      -- Show changes when repo is dirty
+      local is_main = status.branch == "main" or status.branch == "master"
+      if not is_main and (status.ahead_main_count > 0 or status.behind_main_count > 0) then
+        if status.ahead_main_count > 0 then table.insert(git_parts, "⇡" .. status.ahead_main_count) end
+        if status.behind_main_count > 0 then table.insert(git_parts, "⇣" .. status.behind_main_count) end
+      elseif status.has_upstream then
+        if status.ahead_count > 0 then table.insert(git_parts, "↑" .. status.ahead_count) end
+        if status.behind_count > 0 then table.insert(git_parts, "↓" .. status.behind_count) end
+      end
+      if status.modified_count > 0 then table.insert(git_parts, "M:" .. status.modified_count) end
+      if status.staged_count > 0 then table.insert(git_parts, "S:" .. status.staged_count) end
+      if status.untracked_count > 0 then table.insert(git_parts, "?:" .. status.untracked_count) end
+      if status.lines_added > 0 then table.insert(git_parts, "+" .. status.lines_added) end
+      if status.lines_deleted > 0 then table.insert(git_parts, "-" .. status.lines_deleted) end
+    else
+      -- Show checkmark when clean
+      table.insert(git_parts, "✓")
     end
-    if status.modified_count > 0 then table.insert(git_parts, "M:" .. status.modified_count) end
-    if status.staged_count > 0 then table.insert(git_parts, "S:" .. status.staged_count) end
-    if status.untracked_count > 0 then table.insert(git_parts, "?:" .. status.untracked_count) end
-    if status.lines_added > 0 then table.insert(git_parts, "+" .. status.lines_added) end
-    if status.lines_deleted > 0 then table.insert(git_parts, "-" .. status.lines_deleted) end
 
     if #git_parts > 0 then
       local git_part = "Git: 󰊢 " .. table.concat(git_parts, " ")
