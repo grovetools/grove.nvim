@@ -76,15 +76,15 @@ local function update_context_size()
           local hl_group = "GroveCtxTokens0"
           if tokens > 1000000 then
             hl_group = "GroveCtxTokensWarn"
-          elseif tokens > 200000 then
+          elseif tokens > 800000 then
             hl_group = "GroveCtxTokens5"
-          elseif tokens > 100000 then
+          elseif tokens > 400000 then
             hl_group = "GroveCtxTokens4"
-          elseif tokens > 50000 then
+          elseif tokens > 200000 then
             hl_group = "GroveCtxTokens3"
-          elseif tokens > 20000 then
+          elseif tokens > 100000 then
             hl_group = "GroveCtxTokens2"
-          elseif tokens > 5000 then
+          elseif tokens > 50000 then
             hl_group = "GroveCtxTokens1"
           end
 
