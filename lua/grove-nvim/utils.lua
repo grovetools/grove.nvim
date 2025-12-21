@@ -145,7 +145,7 @@ function M.run_in_float_term_output(command)
 end
 
 -- Helper to run a command in a floating terminal
-function M.run_in_float_term_tui(command, title)
+function M.run_in_float_term_tui(command, title, on_exit_callback)
   local width = math.floor(vim.o.columns * 0.9)
   local height = math.floor(vim.o.lines * 0.85)
   local row = math.floor((vim.o.lines - height) / 2)
@@ -205,6 +205,11 @@ function M.run_in_float_term_tui(command, title)
           file_to_edit = file_to_edit:gsub('\27%[[0-9;]*m', ''):gsub('%s+$', '')
           vim.notify("Grove: Opening " .. vim.fn.fnamemodify(file_to_edit, ':t'), vim.log.levels.INFO)
           vim.cmd('edit ' .. vim.fn.fnameescape(file_to_edit))
+        end
+
+        -- Call custom on_exit callback if provided
+        if on_exit_callback then
+          on_exit_callback()
         end
       end)
     end

@@ -4,6 +4,7 @@ M.state = {
   context_size = nil, -- Will become { display = "ctx:1.2k", hl_group = "GroveCtxTokens2", tokens = 1234 }
   rules_file = nil,
   plan_status = nil,
+  chat_running = false,
 }
 
 local timers = {}
@@ -71,7 +72,7 @@ local function update_context_size()
           end
 
           local new_data = {
-            display = "cx:" .. formatted,
+            display = "cx:" .. formatted .. " tokens",
             hl_group = hl_group,
             tokens = tokens,
           }
@@ -134,6 +135,15 @@ local function update_rules_file()
   })
 end
 
+-- Update chat running status
+local function update_chat_status()
+  local new_value = vim.g.grove_chat_running == true
+  if new_value ~= M.state.chat_running then
+    M.state.chat_running = new_value
+    notify_update()
+  end
+end
+
 -- Update plan status cache
 local function update_plan_status()
   local flow_path = vim.fn.exepath("flow")
@@ -187,16 +197,16 @@ local function update_plan_status()
           end
 
           if completed > 0 then
-            table.insert(colored_stats, { text = "✓" .. completed, hl = "DiagnosticOk" })
+            table.insert(colored_stats, { text = "󰄳 " .. completed, hl = "DiagnosticOk" })
           end
           if running > 0 then
-            table.insert(colored_stats, { text = "⟳" .. running, hl = "DiagnosticInfo" })
+            table.insert(colored_stats, { text = "󰔟 " .. running, hl = "DiagnosticInfo" })
           end
           if pending > 0 then
-            table.insert(colored_stats, { text = "○" .. pending, hl = "Comment" })
+            table.insert(colored_stats, { text = "󰭻 " .. pending, hl = "Comment" })
           end
           if failed > 0 then
-            table.insert(colored_stats, { text = "✗" .. failed, hl = "DiagnosticError" })
+            table.insert(colored_stats, { text = " " .. failed, hl = "DiagnosticError" })
           end
 
           -- Only notify if the data has actually changed
@@ -247,18 +257,23 @@ function M.start()
   update_context_size()
   update_rules_file()
   update_plan_status()
+  update_chat_status()
 
   -- Start timers
   timers.context = vim.fn.timer_start(5000, update_context_size, { ['repeat'] = -1 })
   timers.rules = vim.fn.timer_start(5000, update_rules_file, { ['repeat'] = -1 })
   timers.plan = vim.fn.timer_start(2000, update_plan_status, { ['repeat'] = -1 })
+  timers.chat = vim.fn.timer_start(500, update_chat_status, { ['repeat'] = -1 })
 
   -- Update context size when rules file is written
   vim.api.nvim_create_autocmd("BufWritePost", {
     pattern = { "*/rules", "*.rules" },
     callback = function()
       -- Delay slightly to let cx process the new rules
-      vim.defer_fn(update_context_size, 100)
+      vim.defer_fn(function()
+        update_rules_file()
+        update_context_size()
+      end, 100)
     end,
   })
 
@@ -266,6 +281,15 @@ function M.start()
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost" }, {
     pattern = "*.md",
     callback = update_context_size,
+  })
+
+  -- Update when GroveRules command is run
+  vim.api.nvim_create_autocmd("User", {
+    pattern = "GroveRulesChanged",
+    callback = function()
+      update_rules_file()
+      vim.defer_fn(update_context_size, 100)
+    end,
   })
 end
 

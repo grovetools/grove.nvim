@@ -25,7 +25,13 @@ end
 
 -- Open cx rules TUI selector
 function M.rules()
-  utils.run_in_float_term_tui('cx rules', 'Grove Rules')
+  utils.run_in_float_term_tui('cx rules', 'Grove Rules', function()
+    -- Update status bar after cx rules completes
+    -- Add delay to allow cx to finish writing its state
+    vim.defer_fn(function()
+      vim.api.nvim_exec_autocmds('User', { pattern = 'GroveRulesChanged', modeline = false })
+    end, 500)
+  end)
 end
 
 return M

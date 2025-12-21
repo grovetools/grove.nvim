@@ -36,6 +36,12 @@ local function get_bar_content()
   local parts = {}
   local p_state = provider.state
 
+  -- Chat running status (show first if active)
+  if p_state.chat_running then
+    -- Use hourglass icon for running chat (matches grove-flow status icons)
+    table.insert(parts, "󰔟 chat")
+  end
+
   if p_state.plan_status and #p_state.plan_status > 0 then
     -- Format plan status with icon
     local plan_parts = {}
@@ -74,15 +80,18 @@ local function do_refresh()
     vim.api.nvim_win_set_config(state.win, { hide = false })
   end
 
+  -- Add left padding
+  local padded_content = " " .. content
+
   vim.api.nvim_buf_set_option(state.buf, "modifiable", true)
-  vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, { content })
+  vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, { padded_content })
   vim.api.nvim_buf_set_option(state.buf, "modifiable", false)
 
   -- Update window size based on content display width
   local opts = config.options.ui.status_bar
   local row = calculate_row(opts.position)
   local content_display_width = vim.fn.strdisplaywidth(content)
-  local width = math.max(content_display_width + 4, 10)  -- +4 for padding and border
+  local width = math.max(content_display_width + 3, 10)  -- +2 for border, +1 for left padding
   local col = math.max(0, vim.o.columns - width)
 
   vim.api.nvim_win_set_config(state.win, {
@@ -96,21 +105,43 @@ local function do_refresh()
   -- Clear previous highlights
   vim.api.nvim_buf_clear_namespace(state.buf, 0, 0, -1)
 
-  -- Apply highlights using byte positions
+  -- Apply highlights using byte positions (accounting for left padding)
   local p_state = provider.state
+
+  -- Highlight chat status
+  if p_state.chat_running then
+    local chat_text = " chat"
+    local chat_start = content:find(chat_text, 1, true)
+    if chat_start then
+      -- Highlight entire chat section (spinner + " chat") in DiagnosticInfo color
+      local padded_start = 1  -- Starts at beginning after left padding space
+      local padded_end = chat_start + #chat_text
+      vim.api.nvim_buf_add_highlight(
+        state.buf,
+        0,
+        "DiagnosticInfo",
+        0,
+        padded_start,
+        padded_end
+      )
+    end
+  end
 
   -- Highlight plan status parts
   if p_state.plan_status and #p_state.plan_status > 0 then
-    -- Find where plan status starts in content (after "󰠡 ")
-    local icon_and_space = "󰠡 "
-    local byte_offset = #icon_and_space
+    -- Find where plan status starts in content
+    local plan_icon = "󰠡 "
+    local plan_start = content:find(plan_icon, 1, true)
+    if plan_start then
+      local byte_offset = plan_start + 1 + #plan_icon - 1  -- +1 for left padding
 
-    for i, stat in ipairs(p_state.plan_status) do
-      local text_byte_len = #stat.text
-      vim.api.nvim_buf_add_highlight(state.buf, 0, stat.hl, 0, byte_offset, byte_offset + text_byte_len)
-      byte_offset = byte_offset + text_byte_len
-      if i < #p_state.plan_status then
-        byte_offset = byte_offset + 1 -- space separator
+      for i, stat in ipairs(p_state.plan_status) do
+        local text_byte_len = #stat.text
+        vim.api.nvim_buf_add_highlight(state.buf, 0, stat.hl, 0, byte_offset, byte_offset + text_byte_len)
+        byte_offset = byte_offset + text_byte_len
+        if i < #p_state.plan_status then
+          byte_offset = byte_offset + 1 -- space separator
+        end
       end
     end
   end
@@ -120,13 +151,15 @@ local function do_refresh()
     local ctx_pattern = p_state.context_size.display
     local ctx_start = content:find(ctx_pattern, 1, true)
     if ctx_start then
+      -- Add 1 to account for left padding
+      local padded_ctx_start = ctx_start + 1
       vim.api.nvim_buf_add_highlight(
         state.buf,
         0,
         p_state.context_size.hl_group,
         0,
-        ctx_start - 1,
-        ctx_start - 1 + #ctx_pattern
+        padded_ctx_start - 1,
+        padded_ctx_start - 1 + #ctx_pattern
       )
 
       -- Highlight rules file in parens (muted & italic)
@@ -134,13 +167,15 @@ local function do_refresh()
         local rules_pattern = "(" .. p_state.rules_file .. ")"
         local rules_start = content:find(rules_pattern, ctx_start, true)
         if rules_start then
+          -- Add 1 to account for left padding
+          local padded_rules_start = rules_start + 1
           vim.api.nvim_buf_add_highlight(
             state.buf,
             0,
             "Comment",
             0,
-            rules_start - 1,
-            rules_start - 1 + #rules_pattern
+            padded_rules_start - 1,
+            padded_rules_start - 1 + #rules_pattern
           )
         end
       end
@@ -166,7 +201,8 @@ function M.show()
 
   -- Calculate width and column based on content
   local content = get_bar_content()
-  local width = math.max(#content + 2, 10)  -- Minimum width of 10
+  local content_display_width = vim.fn.strdisplaywidth(content)
+  local width = math.max(content_display_width + 2, 10)  -- +2 for border
   local col = math.max(0, vim.o.columns - width)
   local height = 1
 
