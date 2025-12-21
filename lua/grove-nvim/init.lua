@@ -12,12 +12,12 @@ local highlights_defined = false
 local function setup_highlights()
   if highlights_defined then return end
   vim.cmd("highlight default link GroveCtxTokens0 Normal")
-  vim.cmd("highlight GroveCtxTokens1 guifg=#D6C3F7 ctermfg=189") -- Lightest Purple
-  vim.cmd("highlight GroveCtxTokens2 guifg=#B99AF5 ctermfg=141")
-  vim.cmd("highlight GroveCtxTokens3 guifg=#9F72F2 ctermfg=135")
-  vim.cmd("highlight GroveCtxTokens4 guifg=#8549EF ctermfg=99")
-  vim.cmd("highlight GroveCtxTokens5 guifg=#6E28E8 ctermfg=93") -- Darkest Purple
-  vim.cmd("highlight GroveCtxTokensWarn guifg=#FF5555 ctermfg=196") -- Red for >1M tokens
+  vim.cmd("highlight default link GroveCtxTokens1 Comment")
+  vim.cmd("highlight default link GroveCtxTokens2 DiagnosticInfo")
+  vim.cmd("highlight default link GroveCtxTokens3 String")
+  vim.cmd("highlight default link GroveCtxTokens4 DiagnosticWarn")
+  vim.cmd("highlight default link GroveCtxTokens5 DiagnosticError")
+  vim.cmd("highlight default link GroveCtxTokensWarn ErrorMsg")
   highlights_defined = true
 end
 
@@ -306,23 +306,22 @@ function M.status()
   return ''
 end
 
---- Get lualine component for chat running status
+--- Get lualine component for current job status
 --- @return table Lualine component configuration
-function M.chat_running_component()
+function M.current_job_status_component()
   return {
     function()
-      return M.status()
+      local status = provider.state.current_job_status
+      if not status then return "" end
+      -- Highlight only the icon, leave status text in default color
+      return string.format("%%#%s#%s%%* %s", status.icon_hl, status.icon, status.status)
     end,
     cond = function()
-      return vim.g.grove_chat_running == true
+      -- Hide if native status bar is enabled
+      if config.options.ui.status_bar.enable then return false end
+      return provider.state.current_job_status ~= nil
     end,
   }
-end
-
---- Deprecated: Use chat_running_component() instead
---- @return table Lualine component configuration
-function M.lualine_component()
-  return M.chat_running_component()
 end
 
 --- Get lualine component for context size

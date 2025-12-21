@@ -36,12 +36,12 @@ local function get_bar_content()
   local parts = {}
   local p_state = provider.state
 
-  -- Chat running status (show first if active)
-  if p_state.chat_running then
-    -- Use hourglass icon for running chat (matches grove-flow status icons)
-    table.insert(parts, "󰔟 chat")
+  -- Current job status (show first if active)
+  if p_state.current_job_status then
+    table.insert(parts, p_state.current_job_status.icon .. " " .. p_state.current_job_status.status)
   end
 
+  -- Plan status (show aggregate plan data)
   if p_state.plan_status and #p_state.plan_status > 0 then
     -- Format plan status with icon
     local plan_parts = {}
@@ -108,21 +108,20 @@ local function do_refresh()
   -- Apply highlights using byte positions (accounting for left padding)
   local p_state = provider.state
 
-  -- Highlight chat status
-  if p_state.chat_running then
-    local chat_text = " chat"
-    local chat_start = content:find(chat_text, 1, true)
-    if chat_start then
-      -- Highlight entire chat section (spinner + " chat") in DiagnosticInfo color
-      local padded_start = 1  -- Starts at beginning after left padding space
-      local padded_end = chat_start + #chat_text
+  -- Highlight current job status icon only
+  if p_state.current_job_status then
+    local icon = p_state.current_job_status.icon
+    -- Use stridx to get byte position in padded_content
+    local byte_start = vim.fn.stridx(padded_content, icon)
+    if byte_start >= 0 then
+      local byte_end = byte_start + #icon
       vim.api.nvim_buf_add_highlight(
         state.buf,
         0,
-        "DiagnosticInfo",
+        p_state.current_job_status.icon_hl,
         0,
-        padded_start,
-        padded_end
+        byte_start,
+        byte_end
       )
     end
   end
@@ -131,16 +130,17 @@ local function do_refresh()
   if p_state.plan_status and #p_state.plan_status > 0 then
     -- Find where plan status starts in content
     local plan_icon = "󰠡 "
-    local plan_start = content:find(plan_icon, 1, true)
-    if plan_start then
-      local byte_offset = plan_start + 1 + #plan_icon - 1  -- +1 for left padding
+    local plan_byte_start = vim.fn.stridx(padded_content, plan_icon)
+    if plan_byte_start >= 0 then
+      -- Start after the plan icon
+      local byte_offset = plan_byte_start + #plan_icon
 
       for i, stat in ipairs(p_state.plan_status) do
         local text_byte_len = #stat.text
         vim.api.nvim_buf_add_highlight(state.buf, 0, stat.hl, 0, byte_offset, byte_offset + text_byte_len)
         byte_offset = byte_offset + text_byte_len
         if i < #p_state.plan_status then
-          byte_offset = byte_offset + 1 -- space separator
+          byte_offset = byte_offset + 1 -- space separator (single byte)
         end
       end
     end
@@ -149,33 +149,31 @@ local function do_refresh()
   -- Highlight context size (find it in the content string)
   if p_state.context_size then
     local ctx_pattern = p_state.context_size.display
-    local ctx_start = content:find(ctx_pattern, 1, true)
-    if ctx_start then
-      -- Add 1 to account for left padding
-      local padded_ctx_start = ctx_start + 1
+    local ctx_byte_start = vim.fn.stridx(padded_content, ctx_pattern)
+    if ctx_byte_start >= 0 then
+      local ctx_byte_end = ctx_byte_start + #ctx_pattern
       vim.api.nvim_buf_add_highlight(
         state.buf,
         0,
         p_state.context_size.hl_group,
         0,
-        padded_ctx_start - 1,
-        padded_ctx_start - 1 + #ctx_pattern
+        ctx_byte_start,
+        ctx_byte_end
       )
 
       -- Highlight rules file in parens (muted & italic)
       if p_state.rules_file then
         local rules_pattern = "(" .. p_state.rules_file .. ")"
-        local rules_start = content:find(rules_pattern, ctx_start, true)
-        if rules_start then
-          -- Add 1 to account for left padding
-          local padded_rules_start = rules_start + 1
+        local rules_byte_start = vim.fn.stridx(padded_content, rules_pattern)
+        if rules_byte_start >= 0 then
+          local rules_byte_end = rules_byte_start + #rules_pattern
           vim.api.nvim_buf_add_highlight(
             state.buf,
             0,
             "Comment",
             0,
-            padded_rules_start - 1,
-            padded_rules_start - 1 + #rules_pattern
+            rules_byte_start,
+            rules_byte_end
           )
         end
       end
@@ -218,8 +216,8 @@ function M.show()
     zindex = 50,
   })
 
-  -- Create a custom dark gray border highlight
-  vim.cmd("highlight GroveStatusBarBorder guifg=#3c3c3c ctermfg=237")
+  -- Link border to a theme-aware group
+  vim.cmd("highlight default link GroveStatusBarBorder Comment")
   vim.wo[state.win].winhighlight = "Normal:StatusLine,FloatBorder:GroveStatusBarBorder"
 
   -- Handle window resizing

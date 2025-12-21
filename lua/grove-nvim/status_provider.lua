@@ -4,11 +4,28 @@ M.state = {
   context_size = nil, -- Will become { display = "ctx:1.2k", hl_group = "GroveCtxTokens2", tokens = 1234 }
   rules_file = nil,
   plan_status = nil,
-  chat_running = false,
+  current_job_status = nil, -- New: { text = "󰔟 running", hl = "DiagnosticInfo" }
 }
 
 local timers = {}
 local last_md_buffer = nil  -- Track the last markdown buffer for context updates
+
+-- A mapping from flow status strings to UI elements
+-- Colors match grove-flow TUI theme
+local status_map = {
+  completed = { icon = "󰄳", icon_hl = "DiagnosticOk" },
+  running = { icon = "󰔟", icon_hl = "DiagnosticInfo" },
+  failed = { icon = "", icon_hl = "DiagnosticError" },
+  pending = { icon = "󰄱", icon_hl = "Comment" },
+  pending_user = { icon = "󰭻", icon_hl = "Comment" },
+  pending_llm = { icon = "󰭻", icon_hl = "Comment" },
+  blocked = { icon = "", icon_hl = "DiagnosticError" },
+  needs_review = { icon = "", icon_hl = "DiagnosticInfo" },
+  hold = { icon = "󰏧", icon_hl = "DiagnosticWarn" },
+  abandoned = { icon = "󰩹", icon_hl = "Comment" },
+  interrupted = { icon = "", icon_hl = "DiagnosticWarn" },
+  todo = { icon = "󰄱", icon_hl = "Comment" },
+}
 
 local function notify_update()
   vim.api.nvim_exec_autocmds("User", { pattern = "GroveStatusUpdated", modeline = false })
@@ -135,13 +152,68 @@ local function update_rules_file()
   })
 end
 
--- Update chat running status
-local function update_chat_status()
-  local new_value = vim.g.grove_chat_running == true
-  if new_value ~= M.state.chat_running then
-    M.state.chat_running = new_value
-    notify_update()
+-- Update status of the currently focused job file
+local function update_current_job_status()
+  local flow_path = vim.fn.exepath("flow")
+  if flow_path == "" then
+    return
   end
+
+  local current_buf_path = vim.api.nvim_buf_get_name(0)
+  if not current_buf_path or not current_buf_path:match("%.md$") then
+    if M.state.current_job_status then
+      M.state.current_job_status = nil
+      notify_update()
+    end
+    return
+  end
+  current_buf_path = vim.fn.fnamemodify(current_buf_path, ":p")
+
+  vim.fn.jobstart({ flow_path, "plan", "status", "--json" }, {
+    stdout_buffered = true,
+    on_stdout = function(_, data)
+      local stdout = table.concat(data or {}, "\n")
+      if stdout:match("^%s*$") then
+        if M.state.current_job_status then
+          M.state.current_job_status = nil
+          notify_update()
+        end
+        return
+      end
+
+      local ok, plan_data = pcall(vim.json.decode, stdout)
+      if not ok or not plan_data or not plan_data.jobs then
+        return
+      end
+
+      local found_job = nil
+      for _, job in ipairs(plan_data.jobs) do
+        if job.file_path and vim.fn.fnamemodify(job.file_path, ":p") == current_buf_path then
+          found_job = job
+          break
+        end
+      end
+
+      local new_status = nil
+      if found_job then
+        local ui_info = status_map[found_job.status] or { icon = "", icon_hl = "Comment" }
+        new_status = {
+          icon = ui_info.icon,
+          icon_hl = ui_info.icon_hl,
+          status = found_job.status,
+        }
+      end
+
+      local has_changed = vim.json.encode(new_status) ~= vim.json.encode(M.state.current_job_status)
+      M.state.current_job_status = new_status
+      if has_changed then
+        notify_update()
+      end
+    end,
+    on_stderr = function()
+      -- Don't clear status on error, prevents flickering if no active plan
+    end,
+  })
 end
 
 -- Update plan status cache
@@ -257,13 +329,13 @@ function M.start()
   update_context_size()
   update_rules_file()
   update_plan_status()
-  update_chat_status()
+  update_current_job_status()
 
   -- Start timers
   timers.context = vim.fn.timer_start(5000, update_context_size, { ['repeat'] = -1 })
   timers.rules = vim.fn.timer_start(5000, update_rules_file, { ['repeat'] = -1 })
   timers.plan = vim.fn.timer_start(2000, update_plan_status, { ['repeat'] = -1 })
-  timers.chat = vim.fn.timer_start(500, update_chat_status, { ['repeat'] = -1 })
+  timers.job = vim.fn.timer_start(3000, update_current_job_status, { ['repeat'] = -1 })
 
   -- Update context size when rules file is written
   vim.api.nvim_create_autocmd("BufWritePost", {
@@ -280,7 +352,10 @@ function M.start()
   -- Update context when switching buffers
   vim.api.nvim_create_autocmd({ "BufEnter", "BufWritePost" }, {
     pattern = "*.md",
-    callback = update_context_size,
+    callback = function()
+      update_context_size()
+      update_current_job_status()
+    end,
   })
 
   -- Update when GroveRules command is run
