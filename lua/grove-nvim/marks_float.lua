@@ -85,16 +85,17 @@ local function render()
 	local width = math.max(max_line_length + 2, 15)
 	local height = math.max(#lines, 1) -- Ensure height is at least 1
 	if state.win and api.nvim_win_is_valid(state.win) then
-		-- Get offset accounting for statusline and status bar
 		local status_bar = require("grove-nvim.status_bar")
-		local bottom_offset = status_bar.get_bottom_offset()
+		local statusline_h = (vim.o.laststatus > 0) and 1 or 0
+		local grove_bar_h = status_bar.get_height()
+		local bottom_offset = statusline_h + grove_bar_h
 
 		api.nvim_win_set_config(state.win, {
 			relative = "editor",
 			width = width,
 			height = height,
-			col = vim.o.columns - width - 2,
-			row = vim.o.lines - height - bottom_offset - 2,
+			col = vim.o.columns - width - 1,
+			row = vim.o.lines - height - bottom_offset - 1,
 		})
 	end
 end
@@ -108,17 +109,18 @@ function M.show()
 	state.buf = api.nvim_create_buf(false, true)
 	api.nvim_buf_set_name(state.buf, "GroveMarksFloat")
 
-	-- Get offset accounting for statusline and status bar
 	local status_bar = require("grove-nvim.status_bar")
-	local bottom_offset = status_bar.get_bottom_offset()
+	local statusline_h = (vim.o.laststatus > 0) and 1 or 0
+	local grove_bar_h = status_bar.get_height()
+	local bottom_offset = statusline_h + grove_bar_h
 
 	local width, height = 20, 5
 	state.win = api.nvim_open_win(state.buf, false, {
 		relative = "editor",
 		width = width,
 		height = height,
-		col = vim.o.columns - width - 2,
-		row = vim.o.lines - height - bottom_offset - 2,
+		col = vim.o.columns - width - 1,
+		row = vim.o.lines - height - bottom_offset - 1,
 		style = "minimal",
 		border = "rounded",
 		focusable = false,
