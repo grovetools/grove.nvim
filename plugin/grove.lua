@@ -200,7 +200,7 @@ vim.keymap.set("n", "<leader>fp", "<cmd>GrovePlanTUI<CR>", { desc = "Grove Plan 
 vim.keymap.set("n", "<leader>fpx", "<cmd>GrovePlanExtract<CR>", { desc = "Grove Plan (Extract from buffer)" })
 vim.keymap.set("n", "<leader>fpp", "<cmd>GrovePlan<CR>", { desc = "Grove Plans (Picker)" })
 vim.keymap.set("n", "<leader>fpl", "<cmd>GroveWorkspacePlansList<CR>", { desc = "Grove Workspace Plans List" })
-vim.keymap.set("n", "<leader>fc", "<cmd>GroveChatRun<CR>", { desc = "Grove Chat Run" })
+vim.keymap.set("n", "<leader>fc", "<cmd>GroveChatRun silent<CR>", { desc = "Grove Chat Run" })
 vim.keymap.set("n", "<leader>fcd", "<cmd>GroveToggleChatUI<CR>", { desc = "Grove Chat: Toggle Display" })
 vim.keymap.set("n", "<leader>fC", "<cmd>GroveConfigAnalyzeTUI<CR>", { desc = "Grove Config Analyze TUI" })
 vim.keymap.set("n", "<leader>fe", "<cmd>GroveEditContext<CR>", { desc = "Grove Edit Context Rules" })
@@ -275,4 +275,3 @@ for i = 1, 9 do
 		require("grove-nvim.marks").go_to(i)
 	end, { desc = "Grove: Go to mark " .. i })
 end
-
