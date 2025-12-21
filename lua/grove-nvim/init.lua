@@ -359,27 +359,15 @@ function M.current_job_status_component()
     function()
       local status = provider.state.current_job_status
       if not status then return "" end
-      -- Show "Job:" label, type icon, filename (if available), then icon + status
+      -- Ultra minimal: just type icon and status icon
       local parts = {}
-      local job_part = "Job: "
-      if status.filename and status.filename ~= "" then
-        -- Add job type icon before filename
-        local type_icon = status.type_icon or ""
-        if type_icon ~= "" then
-          job_part = job_part .. type_icon .. " " .. status.filename .. " "
-        else
-          job_part = job_part .. status.filename .. " "
-        end
+      if status.type_icon and status.type_icon ~= "" then
+        table.insert(parts, status.type_icon)
       end
-      -- Highlight only the icon, leave status text in default color
-      job_part = job_part .. string.format("%%#%s#%s%%* %s", status.icon_hl, status.icon, status.status)
+      -- Highlight only the status icon
+      table.insert(parts, string.format("%%#%s#%s%%*", status.icon_hl, status.icon))
 
-      -- Add model if present
-      if status.model and status.model ~= "" then
-        job_part = job_part .. " 󰚩 " .. status.model
-      end
-
-      return job_part
+      return table.concat(parts, " ")
     end,
     cond = function()
       -- Hide if native status bar is enabled
@@ -398,9 +386,9 @@ function M.context_size_component()
     function()
       local cache = provider.state.context_size
       if type(cache) == "table" and cache.display then
-        -- Remove "cx:" prefix and add "Context:" label with icon
+        -- Minimal: just icon and value, no label
         local ctx_display = cache.display:gsub("^cx:", "")
-        return string.format("Context: 󰄨 %%#%s#%s%%*", cache.hl_group, ctx_display)
+        return string.format("󰄨 %%#%s#%s%%*", cache.hl_group, ctx_display)
       end
       return ""
     end,
@@ -417,12 +405,13 @@ end
 function M.rules_file_component()
   return {
     function()
-      return provider.state.rules_file or ""
+      -- Not shown in minimal mode - context size component is enough
+      return ""
     end,
     cond = function()
       -- Hide if native status bar is enabled
       if config.options.ui.status_bar.enable then return false end
-      return vim.bo.filetype == 'markdown'
+      return false  -- Always hidden in minimal mode
     end,
   }
 end
@@ -437,17 +426,23 @@ function M.plan_status_component()
         return ""
       end
 
-      -- Build colored string parts for lualine with "Plan:" label
+      -- Ultra minimal: just icon and numeric stats (skip plan name)
       local parts = {}
       for i, stat in ipairs(stats) do
-        if i > 1 then
-          table.insert(parts, " ")
+        -- Skip the first item if it's the plan name (no color highlighting)
+        if stat.hl ~= "Normal" then
+          if #parts > 0 then
+            table.insert(parts, " ")
+          end
+          -- Use %#HlGroup# syntax for inline highlighting
+          table.insert(parts, "%#" .. stat.hl .. "#" .. stat.text .. "%*")
         end
-        -- Use %#HlGroup# syntax for inline highlighting
-        table.insert(parts, "%#" .. stat.hl .. "#" .. stat.text .. "%*")
       end
 
-      return "Plan: 󰠡 " .. table.concat(parts)
+      if #parts > 0 then
+        return "󰠡 " .. table.concat(parts)
+      end
+      return ""
     end,
     cond = function()
       -- Hide if native status bar is enabled
@@ -645,6 +640,10 @@ end
 --- Get lualine component for git changes
 --- @return table Lualine component configuration
 function M.git_changes_component()
+  -- Define custom highlights for git changes (foreground only, no background)
+  vim.cmd("highlight default GroveGitAdded guifg=#98c379 ctermfg=green")
+  vim.cmd("highlight default GroveGitDeleted guifg=#e06c75 ctermfg=red")
+
   return {
     function()
       local status = provider.state.git_status
@@ -657,8 +656,8 @@ function M.git_changes_component()
         info = "DiagnosticInfo",
         warn = "DiagnosticWarn",
         error = "DiagnosticError",
-        add = "DiffAdd",
-        delete = "DiffDelete",
+        add = "GroveGitAdded",
+        delete = "GroveGitDeleted",
         normal = "Normal",
         ok = "DiagnosticOk",
       }
