@@ -25,7 +25,7 @@ local function calculate_row(position, height)
     return 0
   end
   local statusline_height = (vim.o.laststatus > 0) and 1 or 0
-  local spacing = 2 -- Add 2 lines of space above the statusline
+  local spacing = 3 -- Add 3 lines of space above the statusline
   return vim.o.lines - statusline_height - height - spacing
 end
 
