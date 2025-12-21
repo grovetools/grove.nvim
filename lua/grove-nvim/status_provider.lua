@@ -29,11 +29,11 @@ local status_map = {
 
 -- A mapping from job type to icon (matches grove-flow)
 local job_type_icons = {
-  interactive_agent = "󰍉",
-  headless_agent = "󰭆",
-  chat = "󰭹",
-  oneshot = "",
-  shell = "",
+  interactive_agent = "", -- fa-robot
+  headless_agent = "󰭆", -- md-robot_industrial
+  chat = "󰭹", -- md-chat
+  oneshot = "", -- fa-bullseye
+  shell = "", -- seti-shell
 }
 
 local function notify_update()
