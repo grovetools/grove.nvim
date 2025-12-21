@@ -7,6 +7,10 @@ M.options = {
       enable = false,     -- Disabled by default.
       position = 'top', -- 'top' or 'bottom'.
     },
+    -- Chat placeholder settings
+    chat_placeholder = {
+      enable = true,      -- Show "Start typing here..." placeholder in empty chat turns
+    },
     -- Lualine component display options (when status_bar.enable = false)
     lualine = {
       plan = {

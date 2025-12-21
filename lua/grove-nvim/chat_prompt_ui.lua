@@ -4,6 +4,7 @@
 local M = {}
 local api = vim.api
 local utils = require("grove-nvim.utils")
+local config = require("grove-nvim.config")
 
 local ns_id = api.nvim_create_namespace("grove_chat_prompt_ui")
 local debounced_update = nil
@@ -12,6 +13,11 @@ local debounced_update = nil
 local function update(bufnr)
 	bufnr = bufnr or api.nvim_get_current_buf()
 	if not api.nvim_buf_is_valid(bufnr) or not vim.b[bufnr].grove_chat_prompt_enabled then
+		return
+	end
+
+	-- Check if chat placeholder is disabled in config
+	if not config.options.ui.chat_placeholder.enable then
 		return
 	end
 
