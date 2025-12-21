@@ -11,7 +11,7 @@ local debounced_update = nil
 -- Icon constants (matching grove-core/tui/theme/icons.go)
 local NERD_ICON_CHAT_QUESTION = "󱜸" -- md-chat_question (U+F1738)
 local NERD_ICON_ROBOT = "󰚩" -- md-robot (U+F06A9)
-local NERD_ICON_PROGRESS = "󰄟" -- md-progress-clock (U+F011F)
+local NERD_ICON_PROGRESS = "󰔟" -- md-hourglass (U+F051F)
 
 local ASCII_ICON_CHAT_QUESTION = "[?]"
 local ASCII_ICON_ROBOT = "[R]"
@@ -128,9 +128,9 @@ function M.setup(bufnr)
 
 	-- Define highlight groups, linking to standard groups for theme compatibility
 	vim.cmd("highlight default link GroveChatDivider Comment")
-	vim.cmd("highlight default link GroveChatUserTurn Title")
-	vim.cmd("highlight default link GroveChatLLMTurn Constant")
-	vim.cmd("highlight default link GroveChatLLMRunning WarningMsg")
+	vim.cmd("highlight default link GroveChatUserTurn DiagnosticWarn")
+	vim.cmd("highlight default link GroveChatLLMTurn DiagnosticOk")
+	vim.cmd("highlight default link GroveChatLLMRunning DiagnosticInfo")
 
 	if not debounced_update then
 		debounced_update = utils.debounce(200, update)
