@@ -201,6 +201,7 @@ local function update_current_job_status()
           icon = ui_info.icon,
           icon_hl = ui_info.icon_hl,
           status = found_job.status,
+          filename = found_job.filename or "",
         }
       end
 
@@ -263,9 +264,9 @@ local function update_plan_status()
           -- Build stats array with color information
           local colored_stats = {}
 
-          -- Add plan name first
+          -- Add plan name first (no color)
           if plan_data.plan then
-            table.insert(colored_stats, { text = plan_data.plan, hl = "DiagnosticInfo" })
+            table.insert(colored_stats, { text = plan_data.plan, hl = "Normal" })
           end
 
           if completed > 0 then

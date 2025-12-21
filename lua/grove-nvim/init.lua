@@ -11,6 +11,7 @@ local spinner_timer = nil
 local highlights_defined = false
 local function setup_highlights()
   if highlights_defined then return end
+  -- Context token highlights - link but explicitly set gui=NONE to prevent italic
   vim.cmd("highlight default link GroveCtxTokens0 Normal")
   vim.cmd("highlight default link GroveCtxTokens1 Comment")
   vim.cmd("highlight default link GroveCtxTokens2 DiagnosticInfo")
@@ -313,8 +314,15 @@ function M.current_job_status_component()
     function()
       local status = provider.state.current_job_status
       if not status then return "" end
+      -- Show "Job:" label, filename (if available), then icon + status
+      local parts = {}
+      local job_part = "Job: "
+      if status.filename and status.filename ~= "" then
+        job_part = job_part .. status.filename .. " "
+      end
       -- Highlight only the icon, leave status text in default color
-      return string.format("%%#%s#%s%%* %s", status.icon_hl, status.icon, status.status)
+      job_part = job_part .. string.format("%%#%s#%s%%* %s", status.icon_hl, status.icon, status.status)
+      return job_part
     end,
     cond = function()
       -- Hide if native status bar is enabled
@@ -333,8 +341,9 @@ function M.context_size_component()
     function()
       local cache = provider.state.context_size
       if type(cache) == "table" and cache.display then
-        -- Use lualine's inline highlighting format
-        return string.format("%%#%s#%s%%*", cache.hl_group, cache.display)
+        -- Remove "cx:" prefix and add "Context:" label with icon
+        local ctx_display = cache.display:gsub("^cx:", "")
+        return string.format("Context: 󰄨 %%#%s#%s%%*", cache.hl_group, ctx_display)
       end
       return ""
     end,
@@ -371,7 +380,7 @@ function M.plan_status_component()
         return ""
       end
 
-      -- Build colored string parts for lualine
+      -- Build colored string parts for lualine with "Plan:" label
       local parts = {}
       for i, stat in ipairs(stats) do
         if i > 1 then
@@ -381,7 +390,7 @@ function M.plan_status_component()
         table.insert(parts, "%#" .. stat.hl .. "#" .. stat.text .. "%*")
       end
 
-      return table.concat(parts)
+      return "Plan: 󰠡 " .. table.concat(parts)
     end,
     cond = function()
       -- Hide if native status bar is enabled

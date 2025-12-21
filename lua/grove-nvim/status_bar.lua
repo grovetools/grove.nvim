@@ -36,23 +36,30 @@ local function get_bar_content()
   local parts = {}
   local p_state = provider.state
 
-  -- Current job status (show first if active)
-  if p_state.current_job_status then
-    table.insert(parts, p_state.current_job_status.icon .. " " .. p_state.current_job_status.status)
-  end
-
-  -- Plan status (show aggregate plan data)
+  -- Plan status (show first - aggregate plan data)
   if p_state.plan_status and #p_state.plan_status > 0 then
     -- Format plan status with icon
     local plan_parts = {}
     for _, stat in ipairs(p_state.plan_status) do
       table.insert(plan_parts, stat.text)
     end
-    table.insert(parts, "󰠡 " .. table.concat(plan_parts, " "))
+    table.insert(parts, "Plan: 󰠡 " .. table.concat(plan_parts, " "))
+  end
+
+  -- Current job filename and status
+  if p_state.current_job_status then
+    local job_part = "Job: "
+    if p_state.current_job_status.filename ~= "" then
+      job_part = job_part .. p_state.current_job_status.filename .. " "
+    end
+    job_part = job_part .. p_state.current_job_status.icon .. " " .. p_state.current_job_status.status
+    table.insert(parts, job_part)
   end
 
   if p_state.context_size then
-    local ctx_part = "󰄨 " .. p_state.context_size.display
+    -- Remove "cx:" prefix from display
+    local ctx_display = p_state.context_size.display:gsub("^cx:", "")
+    local ctx_part = "Context: 󰄨 " .. ctx_display
     -- Add rules file in parens if present
     if p_state.rules_file then
       ctx_part = ctx_part .. " (" .. p_state.rules_file .. ")"
@@ -60,7 +67,7 @@ local function get_bar_content()
     table.insert(parts, ctx_part)
   end
 
-  return table.concat(parts, "  ")
+  return table.concat(parts, "  │  ")
 end
 
 local function do_refresh()
@@ -105,8 +112,14 @@ local function do_refresh()
   -- Clear previous highlights
   vim.api.nvim_buf_clear_namespace(state.buf, 0, 0, -1)
 
+  -- Define italic label highlight and non-italic override
+  vim.cmd("highlight default GroveStatusLabel gui=italic cterm=italic")
+  vim.cmd("highlight default GroveStatusContent gui=NONE cterm=NONE")
+
   -- Apply highlights using byte positions (accounting for left padding)
   local p_state = provider.state
+
+  -- First apply content highlights, then labels (so labels take priority)
 
   -- Highlight current job status icon only
   if p_state.current_job_status then
@@ -146,9 +159,10 @@ local function do_refresh()
     end
   end
 
-  -- Highlight context size (find it in the content string)
+  -- Highlight context size (token count with color, no italic)
+  -- This is applied BEFORE label highlights so label italic won't affect it
   if p_state.context_size then
-    local ctx_pattern = p_state.context_size.display
+    local ctx_pattern = p_state.context_size.display:gsub("^cx:", "")
     local ctx_byte_start = vim.fn.stridx(padded_content, ctx_pattern)
     if ctx_byte_start >= 0 then
       local ctx_byte_end = ctx_byte_start + #ctx_pattern
@@ -160,9 +174,10 @@ local function do_refresh()
         ctx_byte_start,
         ctx_byte_end
       )
+    end
 
-      -- Highlight rules file in parens (muted & italic)
-      if p_state.rules_file then
+    -- Highlight rules file in parens (muted & italic)
+    if p_state.rules_file then
         local rules_pattern = "(" .. p_state.rules_file .. ")"
         local rules_byte_start = vim.fn.stridx(padded_content, rules_pattern)
         if rules_byte_start >= 0 then
@@ -177,6 +192,31 @@ local function do_refresh()
           )
         end
       end
+    end
+  end
+
+  -- Apply label highlights last so they take priority and don't bleed into content
+  -- Highlight "Plan:" label as italic
+  if p_state.plan_status and #p_state.plan_status > 0 then
+    local label_start = vim.fn.stridx(padded_content, "Plan:")
+    if label_start >= 0 then
+      vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusLabel", 0, label_start, label_start + #"Plan:")
+    end
+  end
+
+  -- Highlight "Job:" label as italic
+  if p_state.current_job_status then
+    local label_start = vim.fn.stridx(padded_content, "Job:")
+    if label_start >= 0 then
+      vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusLabel", 0, label_start, label_start + #"Job:")
+    end
+  end
+
+  -- Highlight "Context:" label as italic (but not the icon or value)
+  if p_state.context_size then
+    local label_start = vim.fn.stridx(padded_content, "Context:")
+    if label_start >= 0 then
+      vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusLabel", 0, label_start, label_start + #"Context:")
     end
   end
 end
