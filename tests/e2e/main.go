@@ -23,6 +23,8 @@ func main() {
 		LaunchTestWithCustomCommand(),
 		LaunchTestInvalidCursorPosition(),
 		LaunchTestVariousNameFormats(),
+		// TUI-based Tend Runner Scenario (experimental)
+		LaunchTestUnderCursorTUI(),
 	}
 
 	// Execute the custom tend application with our scenarios
