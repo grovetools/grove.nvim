@@ -236,6 +236,9 @@ vim.keymap.set("n", "<leader>ji", "<cmd>GroveAddJobTUI<CR>", { desc = "Grove Add
 vim.keymap.set("v", "<leader>fq", "<cmd>GroveText<CR>", { desc = "Grove Ask Question (Flow)" })
 vim.keymap.set("v", "<leader>fr", "<cmd>GroveTextRun<CR>", { desc = "Grove Ask & Run (Flow)" })
 
+-- Tend
+vim.keymap.set("n", "<leader>ftr", "<cmd>GroveRunTest<CR>", { desc = "Grove: Run Tend test" })
+
 -- Marks Commands
 vim.api.nvim_create_user_command("GroveMarkFile", function()
 	require("grove-nvim.marks").add_file(vim.fn.expand("%:p"))
@@ -270,6 +273,13 @@ vim.api.nvim_create_user_command("GroveToggleMarksWindow", function()
 end, {
 	nargs = 0,
 	desc = "Toggle the persistent Grove marks window.",
+})
+
+vim.api.nvim_create_user_command("GroveRunTest", function()
+	require("grove-nvim.grove").run_test_under_cursor()
+end, {
+	nargs = 0,
+	desc = "Run tend test for scenario under cursor.",
 })
 
 -- Keybindings for Marks

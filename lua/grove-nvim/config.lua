@@ -37,6 +37,10 @@ M.options = {
       },
     },
   },
+  test_runner = {
+    -- %s will be replaced with the scenario name under the cursor
+    command_template = "tend run --debug-session %s",
+  },
 }
 
 ---Merges user options with the default configuration.

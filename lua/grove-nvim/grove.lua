@@ -10,6 +10,7 @@ local hooks = require('grove-nvim.hooks')
 local data = require('grove-nvim.data')
 local rules = require('grove-nvim.rules')
 local marks = require('grove-nvim.marks')
+local tend = require('grove-nvim.tend')
 
 local M = {}
 
@@ -65,5 +66,8 @@ M.unmark_file = marks.remove_file
 M.clear_marks = marks.clear
 M.open_marks_menu = marks.open_menu
 M.goto_mark = marks.go_to
+
+-- Tend functions
+M.run_test_under_cursor = tend.run_test_under_cursor
 
 return M

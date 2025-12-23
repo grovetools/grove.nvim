@@ -18,6 +18,11 @@ func main() {
 		NvimE2eScenario(),
 		// Text Interaction Scenarios
 		TextInteractionScenario(),
+		// Tend Runner Scenarios
+		LaunchTestUnderCursorHappyPath(),
+		LaunchTestWithCustomCommand(),
+		LaunchTestInvalidCursorPosition(),
+		LaunchTestVariousNameFormats(),
 	}
 
 	// Execute the custom tend application with our scenarios
