@@ -160,10 +160,10 @@ local function get_bar_content()
       }
     else
       -- Fallback for fewer than 4 components
-      local line1_parts = { table.unpack(all_parts, 1, math.min(split_at, #all_parts)) }
+      local line1_parts = { (unpack or table.unpack)(all_parts, 1, math.min(split_at, #all_parts)) }
       local line2_parts = {}
       if #all_parts > split_at then
-        line2_parts = { table.unpack(all_parts, split_at + 1) }
+        line2_parts = { (unpack or table.unpack)(all_parts, split_at + 1) }
       end
 
       if #line2_parts > 0 then
