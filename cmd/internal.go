@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -108,10 +107,9 @@ func newResolveAliasesCmd() *cobra.Command {
 			// --- Start Notebook Alias Generation Logic ---
 			coreCfg, err := config.LoadDefault()
 			if err != nil {
-				ctx := context.Background()
-				ulog.Warn("Could not load grove config for notebook aliases").
+	ulog.Warn("Could not load grove config for notebook aliases").
 					Err(err).
-					Log(ctx)
+					Emit()
 			}
 
 			type processedNotebook struct {

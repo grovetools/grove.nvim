@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"os"
@@ -59,11 +58,10 @@ func newTextSelectCmd() *cobra.Command {
 				return fmt.Errorf("failed to write to target file: %w", err)
 			}
 
-			ctx := context.Background()
-			textUlog.Success("Appended selection to file").
+	textUlog.Success("Appended selection to file").
 				Field("target_file", targetFile).
 				Field("language", language).
-				Log(ctx)
+				Emit()
 			return nil
 		},
 	}
@@ -114,10 +112,9 @@ func newTextAskCmd() *cobra.Command {
 				return fmt.Errorf("failed to write question to target file: %w", err)
 			}
 
-			ctx := context.Background()
-			textUlog.Success("Appended question to file").
+	textUlog.Success("Appended question to file").
 				Field("target_file", targetFile).
-				Log(ctx)
+				Emit()
 
 			return nil
 		},
