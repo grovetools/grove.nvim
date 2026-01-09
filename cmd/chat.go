@@ -11,8 +11,8 @@ import (
 func newChatCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "chat [file_path]",
-		Short: "Run 'flow chat run' on the specified file",
-		Long:  "A helper command for the Neovim plugin to execute 'flow chat run' on the currently open note.",
+		Short: "Run 'flow run' on the specified file",
+		Long:  "A helper command for the Neovim plugin to execute 'flow run' on the currently open note.",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			filePath := args[0]
@@ -22,9 +22,9 @@ func newChatCmd() *cobra.Command {
 				return fmt.Errorf("'flow' command not found in PATH. Please ensure the grove-flow binary is installed and accessible")
 			}
 
-			// Construct the command to run: `flow chat run <file_path>`
+			// Construct the command to run: `flow run <file_path>`
 			// #nosec G204 -- filePath comes from validated user input
-			flowCmd := exec.Command("grove", "flow", "chat", "run", filePath)
+			flowCmd := exec.Command("grove", "flow", "run", filePath)
 
 			// Pipe the stdout and stderr directly to the parent process (Neovim)
 			// This allows Neovim's terminal to display the output in real-time.

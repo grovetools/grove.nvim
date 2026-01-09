@@ -36,7 +36,7 @@ This example demonstrates starting with an interactive session in a markdown fil
 
 #### Mechanism
 
--   `:GroveChatRun` executes the `neogrove chat` command, which is a wrapper around the `grove-flow` tool's `flow chat run <file>` command.
+-   `:GroveChatRun` executes the `neogrove chat` command, which is a wrapper around the `grove-flow` tool's `flow run <file>` command.
 -   `:GrovePlanExtract` calls `neogrove plan init --extract-all-from <file>`, which uses `grove-flow` to initialize a plan and populate the first job from the specified file's content.
 
 ---
@@ -157,4 +157,4 @@ This workflow can be used for tasks such as:
 
 #### Mechanism
 
-This workflow uses `neogrove text select` and `neogrove text ask` to append content to the target file. It then triggers `neogrove chat`, which executes `flow chat run` on the updated target file. The background job and statusline integration are managed by the Lua plugin.
+This workflow uses `neogrove text select` and `neogrove text ask` to append content to the target file. It then triggers `neogrove chat`, which executes `flow run` on the updated target file. The background job and statusline integration are managed by the Lua plugin.

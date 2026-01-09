@@ -201,7 +201,7 @@ func runGroveChatRunCommand() harness.Step {
 
 // verifyFlowCommandWasCalled checks the log file from our mock.
 func verifyFlowCommandWasCalled() harness.Step {
-	return harness.NewStep("verify 'flow chat run' was called", func(ctx *harness.Context) error {
+	return harness.NewStep("verify 'flow run' was called", func(ctx *harness.Context) error {
 		logFile := ctx.GetString("flow_log_file")
 		content, err := fs.ReadString(logFile)
 		if err != nil {
@@ -209,7 +209,7 @@ func verifyFlowCommandWasCalled() harness.Step {
 		}
 
 		notePath := filepath.Join(ctx.GetString("test_project_dir"), "my_note.md")
-		
+
 		// Check if flow was called at all
 		if content == "" {
 			// Check neogrove wrapper log for debugging
@@ -220,15 +220,15 @@ func verifyFlowCommandWasCalled() harness.Step {
 			}
 			return fmt.Errorf("flow mock log file is empty - flow command was not called\nNeogrove wrapper log:\n%s", neogroveLog)
 		}
-		
-		// Check for the expected command - looking for "Arguments: chat run <path>"
-		expectedArgs := fmt.Sprintf("Arguments: chat run %s", notePath)
+
+		// Check for the expected command - looking for "Arguments: run <path>"
+		expectedArgs := fmt.Sprintf("Arguments: run %s", notePath)
 		if !strings.Contains(content, expectedArgs) {
-			// Also check for just "chat run" in case path handling is different
-			if !strings.Contains(content, "chat run") {
-				return fmt.Errorf("flow was not called with 'chat run' command. Log content:\n%s", content)
+			// Also check for just "run" in case path handling is different
+			if !strings.Contains(content, "run") {
+				return fmt.Errorf("flow was not called with 'run' command. Log content:\n%s", content)
 			}
-			// If we have chat run but not the exact path, that's still a pass
+			// If we have run but not the exact path, that's still a pass
 			// Just continue without logging since ctx.Log doesn't exist
 		}
 
