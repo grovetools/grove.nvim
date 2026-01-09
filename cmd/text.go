@@ -1,12 +1,16 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 
+	grovelogging "github.com/mattsolo1/grove-core/logging"
 	"github.com/spf13/cobra"
 )
+
+var textUlog = grovelogging.NewUnifiedLogger("grove-nvim.text")
 
 func newTextCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -55,7 +59,11 @@ func newTextSelectCmd() *cobra.Command {
 				return fmt.Errorf("failed to write to target file: %w", err)
 			}
 
-			fmt.Fprintf(os.Stderr, "Appended selection to %s\n", targetFile)
+			ctx := context.Background()
+			textUlog.Success("Appended selection to file").
+				Field("target_file", targetFile).
+				Field("language", language).
+				Log(ctx)
 			return nil
 		},
 	}
@@ -105,7 +113,11 @@ func newTextAskCmd() *cobra.Command {
 			if _, err := f.WriteString(formattedQuestion); err != nil {
 				return fmt.Errorf("failed to write question to target file: %w", err)
 			}
-			fmt.Fprintf(os.Stderr, "Appended question to %s\n", targetFile)
+
+			ctx := context.Background()
+			textUlog.Success("Appended question to file").
+				Field("target_file", targetFile).
+				Log(ctx)
 
 			return nil
 		},

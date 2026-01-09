@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,11 +14,14 @@ import (
 
 	"github.com/mattsolo1/grove-core/config"
 	"github.com/mattsolo1/grove-core/git"
+	grovelogging "github.com/mattsolo1/grove-core/logging"
 	"github.com/mattsolo1/grove-core/util/pathutil"
 	"github.com/mattsolo1/grove-core/pkg/workspace"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
+
+var ulog = grovelogging.NewUnifiedLogger("grove-nvim.internal")
 
 // findWorkspaceByPath finds the best matching workspace for a given path,
 // using case-insensitive matching on macOS/Windows.
@@ -104,7 +108,10 @@ func newResolveAliasesCmd() *cobra.Command {
 			// --- Start Notebook Alias Generation Logic ---
 			coreCfg, err := config.LoadDefault()
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "grove-nvim warning: could not load grove config for notebook aliases: %v\n", err)
+				ctx := context.Background()
+				ulog.Warn("Could not load grove config for notebook aliases").
+					Err(err).
+					Log(ctx)
 			}
 
 			type processedNotebook struct {
