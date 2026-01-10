@@ -186,6 +186,9 @@ function M.chat_run(args)
       vim.cmd('silent! redrawstatus')
     end, {['repeat'] = -1})
     
+    -- Collect stderr for error reporting
+    local stderr_output = {}
+
     -- Run in background
     running_job = vim.fn.jobstart({neogrove_path, 'chat', buf_path}, {
       on_exit = function(_, exit_code)
@@ -228,13 +231,28 @@ function M.chat_run(args)
             -- Use echo instead of notify to avoid press ENTER prompt
             vim.api.nvim_echo({{"Grove: Chat completed", "Normal"}}, false, {})
           else
-            vim.api.nvim_echo({{"Grove: Chat failed with exit code " .. exit_code, "ErrorMsg"}}, false, {})
+            -- Show error with stderr output if available
+            local error_msg = "Grove: Chat failed with exit code " .. exit_code
+            local stderr_text = table.concat(stderr_output, "")
+            if stderr_text ~= "" then
+              -- Use vim.notify for multi-line error messages so user can see the full error
+              vim.notify(error_msg .. "\n" .. stderr_text, vim.log.levels.ERROR)
+            else
+              vim.api.nvim_echo({{error_msg, "ErrorMsg"}}, false, {})
+            end
           end
         end)
         running_job = nil
       end,
       on_stderr = function(_, data)
-        -- Silently ignore stderr unless debugging
+        -- Collect stderr output for error reporting
+        if data then
+          for _, line in ipairs(data) do
+            if line ~= "" then
+              table.insert(stderr_output, line .. "\n")
+            end
+          end
+        end
       end,
     })
   else

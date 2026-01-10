@@ -38,26 +38,40 @@ func setupNvimEnvironmentAndMockFlow() harness.Step {
 			}
 		}
 
-		// 2. Create a mock 'flow' binary
+		// 2. Create mock 'flow' and 'grove' binaries
+		// neogrove chat checks for 'flow' in PATH but actually calls 'grove flow run'
 		flowLogFile := filepath.Join(ctx.RootDir, "flow_mock.log")
 		// Create the log file first to ensure it exists
 		if err := fs.WriteString(flowLogFile, ""); err != nil {
 			return err
 		}
-		mockFlowScript := fmt.Sprintf(`#!/bin/bash
-# Mock 'flow' command
-echo "[$(date)] Mock flow called" >> %s
-echo "Arguments: $@" >> %s
-echo "PATH: $PATH" >> %s
-echo "PWD: $PWD" >> %s
-# Simulate some output so the calling process doesn't hang
-echo "Mock flow executed successfully"
+		// Mock flow - just needs to exist for the PATH check
+		mockFlowScript := `#!/bin/bash
+# Mock 'flow' command - just needs to exist for PATH check
+echo "Mock flow executed"
 exit 0
-`, flowLogFile, flowLogFile, flowLogFile, flowLogFile)
+`
 		if err := fs.WriteString(filepath.Join(mockBinDir, "flow"), mockFlowScript); err != nil {
 			return err
 		}
 		if err := os.Chmod(filepath.Join(mockBinDir, "flow"), 0755); err != nil {
+			return err
+		}
+		// Mock grove - this is what neogrove actually calls
+		mockGroveScript := fmt.Sprintf(`#!/bin/bash
+# Mock 'grove' command - handles 'grove flow run' calls
+echo "[$(date)] Mock grove called" >> %s
+echo "Arguments: $@" >> %s
+echo "PATH: $PATH" >> %s
+echo "PWD: $PWD" >> %s
+# Simulate success
+echo "Mock grove flow run executed successfully"
+exit 0
+`, flowLogFile, flowLogFile, flowLogFile, flowLogFile)
+		if err := fs.WriteString(filepath.Join(mockBinDir, "grove"), mockGroveScript); err != nil {
+			return err
+		}
+		if err := os.Chmod(filepath.Join(mockBinDir, "grove"), 0755); err != nil {
 			return err
 		}
 
@@ -201,35 +215,34 @@ func runGroveChatRunCommand() harness.Step {
 
 // verifyFlowCommandWasCalled checks the log file from our mock.
 func verifyFlowCommandWasCalled() harness.Step {
-	return harness.NewStep("verify 'flow run' was called", func(ctx *harness.Context) error {
+	return harness.NewStep("verify 'grove flow run' was called", func(ctx *harness.Context) error {
 		logFile := ctx.GetString("flow_log_file")
 		content, err := fs.ReadString(logFile)
 		if err != nil {
-			return fmt.Errorf("failed to read mock flow log file: %w", err)
+			return fmt.Errorf("failed to read mock grove log file: %w", err)
 		}
 
 		notePath := filepath.Join(ctx.GetString("test_project_dir"), "my_note.md")
 
-		// Check if flow was called at all
+		// Check if grove was called at all
 		if content == "" {
 			// Check neogrove wrapper log for debugging
 			neogroveLogPath := ctx.GetString("neogrove_log_file")
 			neogroveLog, _ := fs.ReadString(neogroveLogPath)
 			if neogroveLog == "" {
-				return fmt.Errorf("flow mock log file is empty and neogrove wrapper was not called")
+				return fmt.Errorf("grove mock log file is empty and neogrove wrapper was not called")
 			}
-			return fmt.Errorf("flow mock log file is empty - flow command was not called\nNeogrove wrapper log:\n%s", neogroveLog)
+			return fmt.Errorf("grove mock log file is empty - grove command was not called\nNeogrove wrapper log:\n%s", neogroveLog)
 		}
 
-		// Check for the expected command - looking for "Arguments: run <path>"
-		expectedArgs := fmt.Sprintf("Arguments: run %s", notePath)
+		// Check for the expected command - looking for "Arguments: flow run <path>"
+		expectedArgs := fmt.Sprintf("Arguments: flow run %s", notePath)
 		if !strings.Contains(content, expectedArgs) {
-			// Also check for just "run" in case path handling is different
-			if !strings.Contains(content, "run") {
-				return fmt.Errorf("flow was not called with 'run' command. Log content:\n%s", content)
+			// Also check for just "flow run" in case path handling is different
+			if !strings.Contains(content, "flow run") {
+				return fmt.Errorf("grove was not called with 'flow run' command. Log content:\n%s", content)
 			}
-			// If we have run but not the exact path, that's still a pass
-			// Just continue without logging since ctx.Log doesn't exist
+			// If we have flow run but not the exact path, that's still a pass
 		}
 
 		return nil
