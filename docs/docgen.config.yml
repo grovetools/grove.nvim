@@ -1,35 +1,34 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/mattsolo1/grove-docgen/main/schema/docgen.config.schema.json
+enabled: true
 title: Grove Neovim
 description: A Neovim plugin that integrates the Grove AI development ecosystem directly into your editor.
 category: Developer Tools
-enabled: true
 settings:
-  output_dir: docs
-  rules_file: docs.rules
-  structured_output_file: pkg/docs/docs.json
-  system_prompt: default
-  model: gemini-2.5-pro
-  regeneration_mode: reference
-readme:
-  generate_toc: true
-  template: docs/README.md.tpl
-  output: README.md
-  strip_lines: 2
-  source_section: overview
+    model: gemini-2.5-pro
+    regeneration_mode: reference
+    rules_file: docs.rules
+    structured_output_file: pkg/docs/docs.json
+    system_prompt: default
+    output_dir: docs
 sections:
-  - name: overview
-    order: 1
-    output: 01-overview.md
-    prompt: prompts/01-overview.md
-    title: Overview
-    agg_strip_lines: 2
-  - name: configuration
-    order: 2
-    output: 02-configuration.md
-    prompt: prompts/03-configuration.md
-    title: Configuration
-  - name: examples
-    order: 3
-    output: 03-examples.md
-    prompt: prompts/02-examples.md
-    title: Examples
+    - name: overview
+      title: Overview
+      order: 1
+      prompt: 01-overview.md
+      output: 01-overview.md
+      agg_strip_lines: 2
+    - name: configuration
+      title: Configuration
+      order: 2
+      prompt: 03-configuration.md
+      output: 02-configuration.md
+    - name: examples
+      title: Examples
+      order: 3
+      prompt: 02-examples.md
+      output: 03-examples.md
+readme:
+    template: docs/README.md.tpl
+    output: README.md
+    source_section: overview
+    strip_lines: 2
+    generate_toc: true
