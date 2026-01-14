@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/mattsolo1/grove-core/logging"
+	"github.com/mattsolo1/grove-core/util/delegation"
 	"github.com/spf13/cobra"
 )
 
@@ -34,12 +35,12 @@ func newChatCmd() *cobra.Command {
 				return fmt.Errorf("'flow' command not found in PATH. Please ensure the grove-flow binary is installed and accessible")
 			}
 
-			// Construct the command to run: `grove flow run <file_path>`
+			// Construct the command to run: `flow run <file_path>`
 			// #nosec G204 -- filePath comes from validated user input
-			flowCmd := exec.Command("grove", "flow", "run", filePath)
+			flowCmd := delegation.Command("flow", "run", filePath)
 
-			chatLog.Debug("Executing grove flow run").
-				Field("command", "grove").
+			chatLog.Debug("Executing flow run").
+				Field("command", "flow").
 				Field("file_path", filePath).
 				Log(ctx)
 

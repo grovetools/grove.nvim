@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/mattsolo1/grove-core/util/delegation"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +35,8 @@ func runFlowCommand(args ...string) error {
 		return fmt.Errorf("'flow' command not found in PATH. Please ensure the grove-flow binary is installed and accessible")
 	}
 
-	flowCmd := exec.Command("grove", append([]string{"flow"}, args...)...)
+	cmdArgs := append([]string{"flow"}, args...)
+	flowCmd := delegation.Command(cmdArgs[0], cmdArgs[1:]...)
 	flowCmd.Stdout = os.Stdout
 	flowCmd.Stderr = os.Stderr
 	flowCmd.Stdin = os.Stdin
