@@ -38,12 +38,9 @@ M.set_context_current_file = cx.set_current_file
 M.open_gmux_sessionize = gmux.sessionize
 M.open_gmux_keymap = gmux.keymap
 
--- Meta (workspace, release, config, logs) functions
-M.open_workspace_status = meta.workspace_status
-M.open_workspace_plans_list = meta.workspace_plans_list
+-- Meta (release, logs) functions
 M.open_release_tui = meta.release_tui
 M.open_logs_tui = meta.logs_tui
-M.open_config_analyze_tui = meta.config_analyze_tui
 
 -- Notebook functions
 M.open_nb_browse = nb.browse
