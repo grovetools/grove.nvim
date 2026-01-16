@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/mattsolo1/grove-core/util/delegation"
+	"github.com/grovetools/core/util/delegation"
 	"github.com/spf13/cobra"
 )
 

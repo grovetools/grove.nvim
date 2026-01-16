@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	grovelogging "github.com/mattsolo1/grove-core/logging"
+	grovelogging "github.com/grovetools/core/logging"
 	"github.com/spf13/cobra"
 )
 

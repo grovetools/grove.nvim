@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/mattsolo1/grove-core/logging"
-	"github.com/mattsolo1/grove-core/util/delegation"
+	"github.com/grovetools/core/logging"
+	"github.com/grovetools/core/util/delegation"
 	"github.com/spf13/cobra"
 )
 

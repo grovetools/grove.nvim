@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/mattsolo1/grove-tend/pkg/fs"
-	"github.com/mattsolo1/grove-tend/pkg/harness"
-	"github.com/mattsolo1/grove-tend/pkg/tui"
+	"github.com/grovetools/tend/pkg/fs"
+	"github.com/grovetools/tend/pkg/harness"
+	"github.com/grovetools/tend/pkg/tui"
 )
 
 // LaunchTestUnderCursorTUI tests the feature using TUI interaction (treating Neovim as a TUI).
@@ -44,7 +44,7 @@ func setupNvimTUIEnvironment() harness.Step {
 		testContent := `package main
 
 import (
-	"github.com/mattsolo1/grove-tend/pkg/harness"
+	"github.com/grovetools/tend/pkg/harness"
 )
 
 // This is a test scenario we'll launch from Neovim

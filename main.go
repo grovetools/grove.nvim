@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/mattsolo1/grove-nvim/cmd"
+	"github.com/grovetools/grove.nvim/cmd"
 )
 
 func main() {

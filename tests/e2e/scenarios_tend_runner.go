@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/mattsolo1/grove-tend/pkg/command"
-	"github.com/mattsolo1/grove-tend/pkg/fs"
-	"github.com/mattsolo1/grove-tend/pkg/harness"
+	"github.com/grovetools/tend/pkg/command"
+	"github.com/grovetools/tend/pkg/fs"
+	"github.com/grovetools/tend/pkg/harness"
 )
 
 // LaunchTestUnderCursorHappyPath tests the basic functionality of running a test from its definition.
@@ -82,7 +82,7 @@ func setupTestFileWithScenario() harness.Step {
 		testContent := `package main
 
 import (
-	"github.com/mattsolo1/grove-tend/pkg/harness"
+	"github.com/grovetools/tend/pkg/harness"
 )
 
 func MyTestScenario() *harness.Scenario {
@@ -118,7 +118,7 @@ func setupTestFileWithVariousNames() harness.Step {
 		testContent := `package main
 
 import (
-	"github.com/mattsolo1/grove-tend/pkg/harness"
+	"github.com/grovetools/tend/pkg/harness"
 )
 
 func HyphenatedScenario() *harness.Scenario {
@@ -164,7 +164,7 @@ func setupTestFileAndCustomConfig() harness.Step {
 		testContent := `package main
 
 import (
-	"github.com/mattsolo1/grove-tend/pkg/harness"
+	"github.com/grovetools/tend/pkg/harness"
 )
 
 func CustomTestScenario() *harness.Scenario {
