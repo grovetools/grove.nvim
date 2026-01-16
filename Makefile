@@ -3,7 +3,7 @@
 BINARY_NAME=grove-nvim
 E2E_BINARY_NAME=tend-grove-nvim
 BIN_DIR=bin
-VERSION_PKG=github.com/mattsolo1/grove-core/version
+VERSION_PKG=github.com/grovetools/core/version
 
 # --- Versioning ---
 # For dev builds, we construct a version string from git info.
@@ -30,7 +30,7 @@ all: build
 build:
 	@mkdir -p $(BIN_DIR)
 	@echo "Building $(BINARY_NAME) version $(VERSION)..."
-	@go build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) github.com/mattsolo1/grove-nvim
+	@go build $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) github.com/grovetools/grove.nvim
 
 test:
 	@echo "Running tests..."
@@ -71,7 +71,7 @@ check: fmt vet lint test
 dev:
 	@mkdir -p $(BIN_DIR)
 	@echo "Building $(BINARY_NAME) version $(VERSION) with race detector..."
-	@go build -race $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) github.com/mattsolo1/grove-nvim
+	@go build -race $(LDFLAGS) -o $(BIN_DIR)/$(BINARY_NAME) github.com/grovetools/grove.nvim
 
 # Cross-compilation targets
 PLATFORMS ?= darwin/amd64 darwin/arm64 linux/amd64 linux/arm64
@@ -85,7 +85,7 @@ build-all:
 		arch=$$(echo $$platform | cut -d'/' -f2); \
 		output_name="$(BINARY_NAME)-$${os}-$${arch}"; \
 		echo "  -> Building $${output_name} version $(VERSION)"; \
-		GOOS=$$os GOARCH=$$arch go build $(LDFLAGS) -o $(DIST_DIR)/$${output_name} github.com/mattsolo1/grove-nvim; \
+		GOOS=$$os GOARCH=$$arch go build $(LDFLAGS) -o $(DIST_DIR)/$${output_name} github.com/grovetools/grove.nvim; \
 	done
 
 # --- E2E Testing ---
