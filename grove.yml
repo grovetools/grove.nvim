@@ -1,9 +1,10 @@
-name: grove-nvim
+name: grove.nvim
 description: Neovim plugin for grove
 type: go
+managed: true
 binary:
-  name: neogrove
-  path: ./bin/neogrove
+  name: grove-nvim
+  path: ./bin/grove-nvim
 
 context:
   default_rules_path: .cx/dev-no-tests.rules

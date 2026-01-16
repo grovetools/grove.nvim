@@ -1,7 +1,7 @@
-# Makefile for grove-nvim (neogrove)
+# Makefile for grove.nvim
 
-BINARY_NAME=neogrove
-E2E_BINARY_NAME=tend-neogrove
+BINARY_NAME=grove-nvim
+E2E_BINARY_NAME=tend-grove-nvim
 BIN_DIR=bin
 VERSION_PKG=github.com/mattsolo1/grove-core/version
 
