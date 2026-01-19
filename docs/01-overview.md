@@ -1,7 +1,3 @@
-# Grove Neovim
-
-<img src="./images/grove-neovim-readme.svg" width="60%" />
-
 Grove-nvim is a Neovim plugin that provides commands and workflows to interact with Grove tools, such as `grove-flow`. The plugin connects Neovim's text editing capabilities with Grove's plan management and code generation features.
 
 <!-- placeholder for animated gif -->
