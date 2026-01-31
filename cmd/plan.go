@@ -48,63 +48,31 @@ func runFlowCommand(args ...string) error {
 }
 
 // newPlanInitCmd wraps `flow plan init`.
+// Most flags are removed as the interactive TUI handles them.
+// Keep extract-all-from for the :GrovePlanExtract command.
 func newPlanInitCmd() *cobra.Command {
-	var (
-		force                bool
-		model                string
-		worktree             string
-		targetAgentContainer string
-		extractAllFrom       string
-		withWorktree         bool
-		openSession          bool
-		recipe               string
-	)
+	var extractAllFrom string
 
 	cmd := &cobra.Command{
-		Use:   "init <directory-name>",
-		Short: "Initialize a new plan directory",
-		Args:  cobra.ExactArgs(1),
+		Use:   "init [directory-name]",
+		Short: "Initialize a new plan directory using an interactive wizard",
+		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			flowArgs := []string{"plan", "init", args[0]}
+			flowArgs := []string{"plan", "init"}
+			if len(args) > 0 {
+				flowArgs = append(flowArgs, args[0])
+			}
 
-			if force {
-				flowArgs = append(flowArgs, "--force")
-			}
-			if model != "" {
-				flowArgs = append(flowArgs, "--model", model)
-			}
-			if worktree != "" {
-				flowArgs = append(flowArgs, "--worktree", worktree)
-			} else if withWorktree {
-				// When with-worktree is set but no explicit worktree value,
-				// pass --worktree without a value to use auto naming
-				flowArgs = append(flowArgs, "--worktree")
-			}
-			if targetAgentContainer != "" {
-				flowArgs = append(flowArgs, "--target-agent-container", targetAgentContainer)
-			}
 			if extractAllFrom != "" {
 				flowArgs = append(flowArgs, "--extract-all-from", extractAllFrom)
 			}
-			if openSession {
-				flowArgs = append(flowArgs, "--open-session")
-			}
-			if recipe != "" {
-				flowArgs = append(flowArgs, "--recipe", recipe)
-			}
 
+			// All other options are handled by the `flow plan init` TUI.
 			return runFlowCommand(flowArgs...)
 		},
 	}
 
-	cmd.Flags().BoolVarP(&force, "force", "f", false, "Overwrite existing directory")
-	cmd.Flags().StringVar(&model, "model", "", "Default model for jobs (e.g., claude-3-5-sonnet-20241022, gpt-4)")
-	cmd.Flags().StringVar(&worktree, "worktree", "", "Default worktree for agent jobs in the plan")
-	cmd.Flags().StringVar(&targetAgentContainer, "target-agent-container", "", "Default container for agent jobs in the plan")
 	cmd.Flags().StringVar(&extractAllFrom, "extract-all-from", "", "Path to a markdown file to extract all content from into an initial job")
-	cmd.Flags().BoolVar(&withWorktree, "with-worktree", false, "Automatically set the worktree name to match the plan directory name")
-	cmd.Flags().BoolVar(&openSession, "open-session", false, "Immediately open a tmux session for the plan's worktree")
-	cmd.Flags().StringVar(&recipe, "recipe", "", "Name of a plan recipe to initialize from")
 
 	return cmd
 }
@@ -160,63 +128,20 @@ func newPlanStatusCmd() *cobra.Command {
 }
 
 // newPlanAddCmd wraps `flow plan add`.
+// All flags are removed as the interactive TUI handles job creation.
 func newPlanAddCmd() *cobra.Command {
-	var (
-		title       string
-		jobType     string
-		prompt      string
-		promptFile  string
-		template    string
-		sourceFiles []string
-		dependsOn   []string
-		model       string
-	)
-
 	cmd := &cobra.Command{
 		Use:   "add <plan-name-or-directory>",
-		Short: "Add a new job to a plan",
+		Short: "Add a new job to a plan using an interactive wizard",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			planDir := args[0]
-			flowArgs := []string{"plan", "add", planDir}
-
-			if title != "" {
-				flowArgs = append(flowArgs, "--title", title)
-			}
-			if jobType != "" {
-				flowArgs = append(flowArgs, "--type", jobType)
-			}
-			if prompt != "" {
-				flowArgs = append(flowArgs, "--prompt", prompt)
-			}
-			if promptFile != "" {
-				flowArgs = append(flowArgs, "--prompt-file", promptFile)
-			}
-			if template != "" {
-				flowArgs = append(flowArgs, "--template", template)
-			}
-			if len(sourceFiles) > 0 {
-				flowArgs = append(flowArgs, "--source-files", strings.Join(sourceFiles, ","))
-			}
-			for _, dep := range dependsOn {
-				flowArgs = append(flowArgs, "--depends-on", dep)
-			}
-			if model != "" {
-				flowArgs = append(flowArgs, "--model", model)
-			}
+			// The `-i` flag launches the interactive TUI in `flow`.
+			flowArgs := []string{"plan", "add", planDir, "-i"}
 
 			return runFlowCommand(flowArgs...)
 		},
 	}
-
-	cmd.Flags().StringVar(&title, "title", "", "Job title")
-	cmd.Flags().StringVar(&jobType, "type", "agent", "Job type (agent, oneshot, shell, etc.)")
-	cmd.Flags().StringVarP(&prompt, "prompt", "p", "", "Inline prompt text")
-	cmd.Flags().StringVarP(&promptFile, "prompt-file", "f", "", "File containing the prompt")
-	cmd.Flags().StringVar(&template, "template", "", "Name of the job template to use")
-	cmd.Flags().StringSliceVar(&sourceFiles, "source-files", nil, "Comma-separated list of source files for reference-based prompts")
-	cmd.Flags().StringSliceVarP(&dependsOn, "depends-on", "d", nil, "Dependencies (job filenames)")
-	cmd.Flags().StringVar(&model, "model", "", "Model to use for the job")
 
 	return cmd
 }

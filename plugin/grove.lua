@@ -55,14 +55,7 @@ vim.api.nvim_create_user_command("GroveAddJob", function()
 	require("grove-nvim.grove").add_job_to_active_plan()
 end, {
 	nargs = 0,
-	desc = "Add a job to the active Grove Plan.",
-})
-
-vim.api.nvim_create_user_command("GroveAddJobTUI", function()
-	require("grove-nvim.grove").add_job_tui()
-end, {
-	nargs = 0,
-	desc = "Add a job to the active Grove Plan using TUI.",
+	desc = "Add a job to the active Grove Plan using an interactive TUI.",
 })
 
 vim.api.nvim_create_user_command("GrovePlanTUI", function()
@@ -207,8 +200,7 @@ vim.keymap.set("n", "<leader>fv", "<cmd>GroveContextView<CR>", { desc = "Grove C
 vim.keymap.set("n", "<leader>fl", "<cmd>GroveLogsTUI<CR>", { desc = "Grove Logs TUI" })
 vim.keymap.set("n", "<leader>fb", "<cmd>GroveNBBrowse<CR>", { desc = "NB Browse" })
 vim.keymap.set("n", "<leader>frl", "<cmd>GroveReleaseTUI<CR>", { desc = "Grove Release TUI" })
-vim.keymap.set("n", "<leader>jn", "<cmd>GroveAddJob<CR>", { desc = "Grove Add Job (New)" })
-vim.keymap.set("n", "<leader>ji", "<cmd>GroveAddJobTUI<CR>", { desc = "Grove Add Job (TUI)" })
+vim.keymap.set("n", "<leader>jn", "<cmd>GroveAddJob<CR>", { desc = "Grove Add Job (TUI)" })
 vim.keymap.set("v", "<leader>fq", "<cmd>GroveText<CR>", { desc = "Grove Ask Question (Flow)" })
 vim.keymap.set("v", "<leader>fr", "<cmd>GroveTextRun<CR>", { desc = "Grove Ask & Run (Flow)" })
 

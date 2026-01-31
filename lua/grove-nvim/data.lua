@@ -132,33 +132,6 @@ function M.get_dependencies(plan_path, callback)
   end)
 end
 
--- Get plan configuration defaults
-function M.get_plan_defaults(plan_path, callback)
-  local grove_nvim_path = vim.fn.exepath('grove-nvim')
-  if grove_nvim_path == '' then
-    callback({ model = "", worktree = "" })
-    return
-  end
-
-  local cmd_args = { grove_nvim_path, 'plan', 'config', plan_path, '--json' }
-  utils.run_command(cmd_args, function(stdout, stderr, exit_code)
-    if exit_code ~= 0 or stdout == "" then
-      callback({ model = "", worktree = "" })
-      return
-    end
-
-    local ok, config = pcall(vim.json.decode, stdout)
-    if ok and config then
-      callback({
-        model = config.model or "",
-        worktree = config.worktree or ""
-      })
-    else
-      callback({ model = "", worktree = "" })
-    end
-  end)
-end
-
 -- Get the active plan from .grove/state.yml
 function M.get_active_plan()
   local state_file = vim.fn.getcwd() .. '/.grove/state.yml'
