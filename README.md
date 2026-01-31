@@ -1,49 +1,51 @@
 <!-- DOCGEN:OVERVIEW:START -->
 
-<img src="docs/images/grove-neovim-readme.svg" width="60%" />
+## Core Mechanisms
 
-Grove-nvim is a Neovim plugin that provides commands and workflows to interact with Grove tools, such as `grove-flow`. The plugin connects Neovim's text editing capabilities with Grove's plan management and code generation features.
+**Hybrid Architecture**: The plugin consists of a Lua frontend and a Go binary. The Lua layer handles UI elements (floating windows, virtual text, inputs), while the Go binary acts as a bridge, constructing and executing commands for `flow`, `cx`, and `tend`.
 
-<!-- placeholder for animated gif -->
+**Terminal Wrapping**: Interactive CLI tools (like `flow plan tui`, `cx view`, `nb tui`) are executed inside Neovim floating windows or splits. This allows usage of the full TUI capabilities without leaving the editor context.
 
-## Key Features
+**Tool Status**: The plugin polls metadata from `flow plan status --json` and `cx stats` to render real-time feedback via a native status bar or Lualine components.
 
--   **In-Editor AI Chat**: Run interactive AI chat sessions directly on the current buffer using the `:GroveChatRun` command.
+**Internal Discovery**: The embedded Go binary utilizes `grove core` libraries directly to perform workspace discovery and alias resolution (`resolve-aliases`), ensuring consistent path handling with the rest of the ecosystem.
 
--   **Plan Management**: Interact with `grove-flow` plans through a UI integrated into Neovim.
-    -   `:GrovePlan`: Opens an interactive picker to browse, preview, and manage existing plans.
-    -   `:GrovePlanInit`: Initializes a new plan directory with guided prompts for configuration.
-    -   `:GrovePlanExtract`: Creates a new plan by extracting content from the current markdown buffer, using its frontmatter or filename to suggest a plan name.
+## Features
 
--   **"Code-to-Chat" Workflow**: A process for using code snippets in AI conversations.
-    -   `:GroveSetTarget`: Designates a markdown file as the "target" for the current session.
-    -   `:'<,'>GroveTextRun`: Appends a visually selected block of code and a user prompt to the target file, then runs a silent chat session on that file.
+### Flow Orchestration
+*   **Chat Execution**: `:GroveChatRun` executes `flow run` on the current Markdown buffer. It pipes output to a terminal window or handles headless execution with status indicators.
+*   **Plan Management**: `:GrovePlan` opens a picker (via `snacks.nvim`) to browse, filter, and manage plans. `:GroveAddJob` provides a form-based UI for appending jobs to the active plan.
+*   **Visual Indicators**: Renders virtual text in Markdown files to distinguish user turns, LLM responses, and running states.
 
--   **Job Management**: Add jobs to plans using either a form-based UI (`:GroveAddJob`) for guided creation or a floating terminal TUI (`:GroveAddJobTUI`) for a more direct `flow` experience.
+### Context Management
+*   **Rule Editing**: Provides syntax highlighting and virtual text statistics for `.grove/rules` files. It executes `cx stats --per-line` to display token counts and file matches next to each rule.
+*   **Alias Resolution**: The rules editor supports `gf` (go to file) on `@alias` directives by resolving them via `cx resolve`.
+*   **Autocompletion**: Integrates with `blink.cmp` to provide completions for:
+    *   **Aliases**: `@alias:` paths resolved from the workspace via `cx workspace list`.
+    *   **Git Repos**: Remote repository paths for `git:` aliases via `cx repo list`.
+    *   **Templates**: Available job templates via `flow plan templates list`.
 
-## How It Works
+### File Marking
+The `:GroveMarkFile` command adds the current buffer to a persistent `.grove/marks` list. The plugin automatically syncs this list into the `.grove/rules` file using aliases, allowing rapid context manipulation without manual rule editing.
 
-The plugin consists of two main components: a Lua plugin for Neovim and a Go command-line application named `grove-nvim`.
+### Testing Integration
+`:GroveRunTest` executes the `tend` test scenario defined under the cursor. It extracts the scenario name from the Go file and runs `tend run --debug-session <name>` in a floating window.
 
-1.  **Lua Plugin (`lua/` files)**: This component runs inside Neovim. It defines user commands (e.g., `:GrovePlan`, `:GroveChatRun`) and keybindings. It is responsible for creating the user interface elements, such as input prompts and pickers, and managing editor state.
+### Text Interaction
+`:GroveText` captures visually selected text and prompts for a user question. It appends both to a target chat file and optionally executes the run immediately (`:GroveTextRun`), facilitating "ask about code" workflows.
 
-2.  **Go Binary (`grove-nvim`)**: When a user invokes a command, the Lua code executes the `grove-nvim` binary with appropriate arguments. This Go application serves as an interface and wrapper.
+## Integrations
 
-3.  **Flow Execution**: The `grove-nvim` binary constructs and executes commands for the `flow` tool from the `grove-flow` project. It pipes standard input, output, and error streams between the `flow` process and the Neovim terminal or background job.
+`grove.nvim` serves as the editor layer for the following tools:
 
-### Installation
-
-Install grove-nvim using the Grove meta-tool:
-```bash
-grove install grove-nvim
-```
-
-Then add to your Neovim configuration. For example, with lazy.nvim:
-```lua
-{ "mattsolo1/grove-nvim" }
-```
-
-Grove-nvim requires the Grove ecosystem. See the [Grove Installation Guide](https://github.com/mattsolo1/grove-meta/blob/main/docs/02-installation.md) for setup instructions.
+*   **`flow`**: Manages the lifecycle of chat sessions and plans. The plugin reads job statuses via JSON output and executes plan modifications.
+*   **`cx`**: Used for context analysis. The plugin visualizes `cx stats` data, uses `cx resolve` for navigation, and `cx workspace list` for autocompletion.
+*   **`tend`**: Executes specific test scenarios identified by the cursor position in Go test files.
+*   **`nav`** / **`gmux`**: `:GroveSessionize` wraps `gmux sz` to switch tmux sessions from within Neovim.
+*   **`hooks`**: `:GroveHooksSessions` displays the active session history TUI.
+*   **`nb`**: `:GroveNBBrowse` opens the notebook TUI for knowledge base navigation.
+*   **`grove`**: Wraps the `release` and `logs` TUIs for ecosystem management.
+*   **`core`**: The plugin's binary imports `grove-core` packages to replicate workspace discovery logic for internal operations.
 
 <!-- DOCGEN:OVERVIEW:END -->
 
