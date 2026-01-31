@@ -36,8 +36,8 @@ This example demonstrates starting with an interactive session in a markdown fil
 
 #### Mechanism
 
--   `:GroveChatRun` executes the `neogrove chat` command, which is a wrapper around the `grove-flow` tool's `flow run <file>` command.
--   `:GrovePlanExtract` calls `neogrove plan init --extract-all-from <file>`, which uses `grove-flow` to initialize a plan and populate the first job from the specified file's content.
+-   `:GroveChatRun` executes the `grove-nvim chat` command, which is a wrapper around the `grove-flow` tool's `flow run <file>` command.
+-   `:GrovePlanExtract` calls `grove-nvim plan init --extract-all-from <file>`, which uses `grove-flow` to initialize a plan and populate the first job from the specified file's content.
 
 ---
 
@@ -100,8 +100,8 @@ This example covers viewing existing plans and adding new jobs.
 
 #### Mechanism
 
--   `:GrovePlan` calls `neogrove plan list --json` to populate the picker.
--   Adding a job via the form collects data and constructs a `neogrove plan add` command with the appropriate flags.
+-   `:GrovePlan` calls `grove-nvim plan list --json` to populate the picker.
+-   Adding a job via the form collects data and constructs a `grove-nvim plan add` command with the appropriate flags.
 -   `:GroveAddJobTUI` directly invokes the `flow` TUI.
 
 ---
@@ -157,4 +157,4 @@ This workflow can be used for tasks such as:
 
 #### Mechanism
 
-This workflow uses `neogrove text select` and `neogrove text ask` to append content to the target file. It then triggers `neogrove chat`, which executes `flow run` on the updated target file. The background job and statusline integration are managed by the Lua plugin.
+This workflow uses `grove-nvim text select` and `grove-nvim text ask` to append content to the target file. It then triggers `grove-nvim chat`, which executes `flow run` on the updated target file. The background job and statusline integration are managed by the Lua plugin.

@@ -4,7 +4,7 @@
 local M = {}
 local utils = require('grove-nvim.utils')
 
---- Converts a list of absolute paths to @a: aliases by calling the neogrove binary.
+--- Converts a list of absolute paths to @a: aliases by calling the grove-nvim binary.
 -- @param paths table A list of absolute paths to convert.
 -- @param callback function(path_map) Called with a map of { original_path = aliased_path }.
 function M.get_aliases_for_paths(paths, callback)
@@ -15,9 +15,9 @@ function M.get_aliases_for_paths(paths, callback)
     return
   end
 
-  local neogrove_path = vim.fn.exepath('neogrove')
-  if neogrove_path == '' then
-    vim.notify("Grove: neogrove executable not found in PATH.", vim.log.levels.ERROR)
+  local grove_nvim_path = vim.fn.exepath('grove-nvim')
+  if grove_nvim_path == '' then
+    vim.notify("Grove: grove-nvim executable not found in PATH.", vim.log.levels.ERROR)
     callback(nil)
     return
   end
@@ -26,7 +26,7 @@ function M.get_aliases_for_paths(paths, callback)
   local stdout_data = {}
   local stderr_data = {}
 
-  local job_id = vim.fn.jobstart({ neogrove_path, 'internal', 'resolve-aliases' }, {
+  local job_id = vim.fn.jobstart({ grove_nvim_path, 'internal', 'resolve-aliases' }, {
     on_stdout = function(_, data, _)
       for _, line in ipairs(data) do
         if line ~= "" then

@@ -3,9 +3,9 @@ require("grove-nvim.watcher")
 
 -- Expose a setup function for users to call from their config
 _G.grove_nvim = {
-  setup = function(opts)
-    require("grove-nvim").setup(opts)
-  end
+	setup = function(opts)
+		require("grove-nvim").setup(opts)
+	end,
 }
 
 vim.api.nvim_create_user_command("GroveChatRun", function(args)

@@ -88,7 +88,7 @@ function M.setup(opts)
   end
 end
 
---- Opens a floating terminal and runs the `neogrove chat` command for the current buffer.
+--- Opens a floating terminal and runs the `grove-nvim chat` command for the current buffer.
 --- @param args table|nil The arguments object from `nvim_create_user_command`.
 --- args.args can contain "silent", "vertical", "horizontal", "fullscreen", "float".
 function M.chat_run(args)
@@ -162,9 +162,9 @@ function M.chat_run(args)
   vim.cmd('silent write')
 
   -- Use grove bin directory
-  local neogrove_path = vim.fn.expand('~/.grove/bin/neogrove')
-  if vim.fn.filereadable(neogrove_path) ~= 1 then
-    vim.notify("Grove: neogrove not found at ~/.grove/bin/neogrove", vim.log.levels.ERROR)
+  local grove_nvim_path = vim.fn.expand('~/.grove/bin/grove-nvim')
+  if vim.fn.filereadable(grove_nvim_path) ~= 1 then
+    vim.notify("Grove: grove-nvim not found at ~/.grove/bin/grove-nvim", vim.log.levels.ERROR)
     return
   end
 
@@ -190,7 +190,7 @@ function M.chat_run(args)
     local stderr_output = {}
 
     -- Run in background
-    running_job = vim.fn.jobstart({neogrove_path, 'chat', buf_path}, {
+    running_job = vim.fn.jobstart({grove_nvim_path, 'chat', buf_path}, {
       on_exit = function(_, exit_code)
         vim.g.grove_chat_running = false
         -- Stop the spinner timer
@@ -286,7 +286,7 @@ function M.chat_run(args)
       vim.wo[win].relativenumber = false
       vim.wo[win].signcolumn = 'no'
 
-      vim.fn.termopen(neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
+      vim.fn.termopen(grove_nvim_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
         on_exit = function()
           vim.schedule(function()
             if vim.api.nvim_win_is_valid(win) then
@@ -310,7 +310,7 @@ function M.chat_run(args)
       vim.cmd('startinsert')
     elseif opts.layout == 'fullscreen' then
       vim.cmd('tabnew')
-      vim.fn.termopen(neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
+      vim.fn.termopen(grove_nvim_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
         on_exit = function()
           vim.schedule(function()
             -- Refresh the original buffer
@@ -325,7 +325,7 @@ function M.chat_run(args)
       vim.cmd('startinsert')
     elseif opts.layout == 'horizontal' then
       vim.cmd('new')
-      vim.fn.termopen(neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
+      vim.fn.termopen(grove_nvim_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
         on_exit = function()
           vim.schedule(function()
             -- Refresh the original buffer
@@ -340,7 +340,7 @@ function M.chat_run(args)
       vim.cmd('startinsert')
     else -- 'vertical'
       vim.cmd('vnew')
-      vim.fn.termopen(neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
+      vim.fn.termopen(grove_nvim_path .. ' chat ' .. vim.fn.shellescape(buf_path), {
         on_exit = function()
           vim.schedule(function()
             -- Refresh the original buffer

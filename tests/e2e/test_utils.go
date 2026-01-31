@@ -9,21 +9,21 @@ import (
 
 // FindBinary is a helper to find the binary path for tests.
 // It checks in the following order:
-// 1. NEOGROVE_BINARY environment variable
+// 1. GROVE_NVIM_BINARY environment variable
 // 2. Common relative paths from test execution directory
 // 3. System PATH
 func FindBinary() (string, error) {
 	// Check environment variable first
-	if binary := os.Getenv("NEOGROVE_BINARY"); binary != "" {
+	if binary := os.Getenv("GROVE_NVIM_BINARY"); binary != "" {
 		return binary, nil
 	}
 
 	// Try common locations relative to test execution directory
 	candidates := []string{
-		"./bin/neogrove",
-		"../bin/neogrove",
-		"../../bin/neogrove",
-		"../../../bin/neogrove",
+		"./bin/grove-nvim",
+		"../bin/grove-nvim",
+		"../../bin/grove-nvim",
+		"../../../bin/grove-nvim",
 	}
 
 	for _, candidate := range candidates {
@@ -37,9 +37,9 @@ func FindBinary() (string, error) {
 	}
 
 	// Try to find in PATH
-	if path, err := exec.LookPath("neogrove"); err == nil {
+	if path, err := exec.LookPath("grove-nvim"); err == nil {
 		return path, nil
 	}
 
-	return "", fmt.Errorf("could not find neogrove binary - please set NEOGROVE_BINARY environment variable or ensure neogrove is built and in PATH")
+	return "", fmt.Errorf("could not find grove-nvim binary - please set GROVE_NVIM_BINARY environment variable or ensure grove-nvim is built and in PATH")
 }

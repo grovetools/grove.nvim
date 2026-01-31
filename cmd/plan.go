@@ -116,7 +116,7 @@ func newPlanListCmd() *cobra.Command {
 		Short: "List all available plans",
 		Long:  "Passes any extra flags (like --json) directly to 'flow plan list'.",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// Construct args: `plan list` followed by any flags passed to neogrove.
+			// Construct args: `plan list` followed by any flags passed to grove-nvim.
 			// We find the 'list' command in os.Args and take everything after it.
 			flowArgs := []string{"plan", "list"}
 			found := false

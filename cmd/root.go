@@ -8,7 +8,7 @@ import (
 var rootCmd *cobra.Command
 
 func init() {
-	rootCmd = cli.NewStandardCommand("neogrove", "Neovim plugin for grove")
+	rootCmd = cli.NewStandardCommand("grove-nvim", "Neovim plugin for grove")
 
 	// Add commands
 	rootCmd.AddCommand(newVersionCmd())

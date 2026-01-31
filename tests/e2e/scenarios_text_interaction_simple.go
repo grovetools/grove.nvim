@@ -66,11 +66,11 @@ id: e2e-test
 }
 
 func testRealBinaryHappyPath() harness.Step {
-	return harness.NewStep("test with real neogrove binary", func(ctx *harness.Context) error {
+	return harness.NewStep("test with real grove-nvim binary", func(ctx *harness.Context) error {
 		chatMdPath := ctx.Get("chat_md_path").(string)
-		
-		// Find the real neogrove binary
-		neogroveBinary, err := FindBinary()
+
+		// Find the real grove-nvim binary
+		groveNvimBinary, err := FindBinary()
 		if err != nil {
 			return err
 		}
@@ -79,7 +79,7 @@ func testRealBinaryHappyPath() harness.Step {
 		snippet := `func main() {
 	fmt.Println("Hello, World!")
 }`
-		selectCmd := command.New(neogroveBinary, "text", "select", "--file", chatMdPath, "--lang", "go")
+		selectCmd := command.New(groveNvimBinary, "text", "select", "--file", chatMdPath, "--lang", "go")
 		selectCmd.Stdin(strings.NewReader(snippet))
 		selectResult := selectCmd.Run()
 		if selectResult.ExitCode != 0 {
@@ -88,7 +88,7 @@ func testRealBinaryHappyPath() harness.Step {
 
 		// 2. Append a question
 		question := "What does this main function do?"
-		askCmd := command.New(neogroveBinary, "text", "ask", "--file", chatMdPath, question)
+		askCmd := command.New(groveNvimBinary, "text", "ask", "--file", chatMdPath, question)
 		askResult := askCmd.Run()
 		if askResult.ExitCode != 0 {
 			return fmt.Errorf("failed to append question: %s", askResult.Stderr)
@@ -119,13 +119,13 @@ func testRealBinaryHappyPath() harness.Step {
 
 func testRealBinaryErrorHandling() harness.Step {
 	return harness.NewStep("test error handling with real binary", func(ctx *harness.Context) error {
-		neogroveBinary, err := FindBinary()
+		groveNvimBinary, err := FindBinary()
 		if err != nil {
 			return err
 		}
 
 		// Test missing required flag
-		selectCmd := command.New(neogroveBinary, "text", "select", "--lang", "go")
+		selectCmd := command.New(groveNvimBinary, "text", "select", "--lang", "go")
 		selectCmd.Stdin(strings.NewReader("some code"))
 		selectResult := selectCmd.Run()
 		

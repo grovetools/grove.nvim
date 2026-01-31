@@ -79,18 +79,18 @@ let g:grove_mock_bin_dir = '%s'
 			return err
 		}
 
-		// Find the neogrove binary
-		neogroveBinary, err := FindBinary()
+		// Find the grove-nvim binary
+		groveNvimBinary, err := FindBinary()
 		if err != nil {
 			return err
 		}
 
-		// Copy neogrove to mock bin
-		mockNeogrovePath := filepath.Join(mockBinDir, "neogrove")
-		cpCmd := command.New("cp", neogroveBinary, mockNeogrovePath)
+		// Copy grove-nvim to mock bin
+		mockGroveNvimPath := filepath.Join(mockBinDir, "grove-nvim")
+		cpCmd := command.New("cp", groveNvimBinary, mockGroveNvimPath)
 		cpResult := cpCmd.Run()
 		if cpResult.ExitCode != 0 {
-			return fmt.Errorf("failed to copy neogrove: %s", cpResult.Stderr)
+			return fmt.Errorf("failed to copy grove-nvim: %s", cpResult.Stderr)
 		}
 
 		// Update PATH to include mock bin
@@ -106,14 +106,14 @@ func testTextSelectionHappyPath() harness.Step {
 		chatMdPath := ctx.Get("chat_md_path").(string)
 		testProjectDir := ctx.Get("test_project_dir").(string)
 
-		// For this test, we'll simulate the workflow by directly calling the neogrove commands
+		// For this test, we'll simulate the workflow by directly calling the grove-nvim commands
 		// since automating visual selection and UI input in headless Neovim is complex
 
 		// 1. Append a code snippet
 		snippet := `func main() {
 	fmt.Println("Hello, World!")
 }`
-		selectCmd := command.New(filepath.Join(testProjectDir, "..", "mock_bin", "neogrove"), 
+		selectCmd := command.New(filepath.Join(testProjectDir, "..", "mock_bin", "grove-nvim"),
 			"text", "select", "--file", chatMdPath, "--lang", "go")
 		selectCmd.Stdin(strings.NewReader(snippet))
 		selectResult := selectCmd.Run()
@@ -123,7 +123,7 @@ func testTextSelectionHappyPath() harness.Step {
 
 		// 2. Append a question
 		question := "What does this main function do?"
-		askCmd := command.New(filepath.Join(testProjectDir, "..", "mock_bin", "neogrove"),
+		askCmd := command.New(filepath.Join(testProjectDir, "..", "mock_bin", "grove-nvim"),
 			"text", "ask", "--file", chatMdPath, question)
 		askResult := askCmd.Run()
 		if askResult.ExitCode != 0 {
@@ -161,7 +161,7 @@ func testTextSelectionNoTargetFile() harness.Step {
 		testProjectDir := ctx.Get("test_project_dir").(string)
 
 		// Test that the command fails when required --file flag is missing
-		selectCmd := command.New(filepath.Join(testProjectDir, "..", "mock_bin", "neogrove"), 
+		selectCmd := command.New(filepath.Join(testProjectDir, "..", "mock_bin", "grove-nvim"),
 			"text", "select", "--lang", "go")
 		selectCmd.Stdin(strings.NewReader("some code"))
 		selectResult := selectCmd.Run()

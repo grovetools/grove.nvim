@@ -3,13 +3,13 @@ local utils = require('grove-nvim.utils')
 
 -- Get available templates
 function M.get_templates(callback)
-  local neogrove_path = vim.fn.exepath('neogrove')
-  if neogrove_path == '' then
+  local grove_nvim_path = vim.fn.exepath('grove-nvim')
+  if grove_nvim_path == '' then
     callback({})
     return
   end
 
-  utils.run_command({ neogrove_path, 'plan', 'template-list', '--json' }, function(stdout, stderr, exit_code)
+  utils.run_command({ grove_nvim_path, 'plan', 'template-list', '--json' }, function(stdout, stderr, exit_code)
     if exit_code ~= 0 or stdout == "" then
       callback({})
       return
@@ -53,13 +53,13 @@ end
 
 -- Get available models
 function M.get_models(callback)
-  local neogrove_path = vim.fn.exepath('neogrove')
-  if neogrove_path == '' then
+  local grove_nvim_path = vim.fn.exepath('grove-nvim')
+  if grove_nvim_path == '' then
     callback({})
     return
   end
 
-  utils.run_command({ neogrove_path, 'models', 'list', '--json' }, function(stdout, stderr, exit_code)
+  utils.run_command({ grove_nvim_path, 'models', 'list', '--json' }, function(stdout, stderr, exit_code)
     if exit_code ~= 0 or stdout == "" then
       vim.notify("Grove: Could not fetch models. " .. stderr, vim.log.levels.WARN)
       callback({})
@@ -71,7 +71,7 @@ function M.get_models(callback)
       callback(data.models)
     else
       -- Fallback: try parsing without --json flag
-      utils.run_command({ neogrove_path, 'models', 'list' }, function(stdout2, stderr2, exit_code2)
+      utils.run_command({ grove_nvim_path, 'models', 'list' }, function(stdout2, stderr2, exit_code2)
         if exit_code2 == 0 and stdout2 ~= "" then
           local model_list = {}
           for line in stdout2:gmatch("[^\n]+") do
@@ -93,7 +93,7 @@ end
 
 -- Get dependencies helper function
 function M.get_dependencies(plan_path, callback)
-  -- Use flow directly instead of neogrove as it has the --format flag
+  -- Use flow directly instead of grove-nvim as it has the --format flag
   local flow_path = vim.fn.exepath('flow')
   if flow_path == '' then
     callback({})
@@ -134,13 +134,13 @@ end
 
 -- Get plan configuration defaults
 function M.get_plan_defaults(plan_path, callback)
-  local neogrove_path = vim.fn.exepath('neogrove')
-  if neogrove_path == '' then
+  local grove_nvim_path = vim.fn.exepath('grove-nvim')
+  if grove_nvim_path == '' then
     callback({ model = "", worktree = "" })
     return
   end
 
-  local cmd_args = { neogrove_path, 'plan', 'config', plan_path, '--json' }
+  local cmd_args = { grove_nvim_path, 'plan', 'config', plan_path, '--json' }
   utils.run_command(cmd_args, function(stdout, stderr, exit_code)
     if exit_code ~= 0 or stdout == "" then
       callback({ model = "", worktree = "" })

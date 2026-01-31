@@ -19,13 +19,13 @@ function M.init()
     -- This function will be called after all config has been gathered
     local function create_plan()
       vim.notify('Grove: Creating plan: ' .. plan_config.name, vim.log.levels.INFO)
-      local neogrove_path = vim.fn.exepath('neogrove')
-      if neogrove_path == '' then
-        vim.notify("Grove: neogrove not found in PATH", vim.log.levels.ERROR)
+      local grove_nvim_path = vim.fn.exepath('grove-nvim')
+      if grove_nvim_path == '' then
+        vim.notify("Grove: grove-nvim not found in PATH", vim.log.levels.ERROR)
         return
       end
 
-      local init_args = { neogrove_path, 'plan', 'init', plan_config.name }
+      local init_args = { grove_nvim_path, 'plan', 'init', plan_config.name }
       if plan_config.model and plan_config.model ~= "" then
         table.insert(init_args, '--model')
         table.insert(init_args, plan_config.model)
@@ -158,7 +158,7 @@ function M.status(plan_path)
     vim.notify('Grove: No plan path provided.', vim.log.levels.ERROR)
     return
   end
-  utils.run_in_float_term('neogrove plan status ' .. vim.fn.shellescape(plan_path))
+  utils.run_in_float_term('grove-nvim plan status ' .. vim.fn.shellescape(plan_path))
 end
 
 -- Run a plan
@@ -168,7 +168,7 @@ function M.run(plan_path)
     return
   end
   vim.notify('Grove: Running plan ' .. plan_path .. '...', vim.log.levels.INFO)
-  utils.run_in_float_term('neogrove plan run ' .. vim.fn.shellescape(plan_path))
+  utils.run_in_float_term('grove-nvim plan run ' .. vim.fn.shellescape(plan_path))
 end
 
 -- Show plan actions menu
@@ -231,8 +231,8 @@ function M.show_config_actions(plan_name)
       if value == nil then
         return vim.notify("Grove: Action cancelled.", vim.log.levels.WARN)
       end
-      local neogrove_path = vim.fn.exepath('neogrove')
-      utils.run_command({ neogrove_path, 'plan', 'config', plan_name, '--set', key .. '=' .. value }, function(_, stderr, exit_code)
+      local grove_nvim_path = vim.fn.exepath('grove-nvim')
+      utils.run_command({ grove_nvim_path, 'plan', 'config', plan_name, '--set', key .. '=' .. value }, function(_, stderr, exit_code)
         if exit_code == 0 then
           vim.notify("Grove: Plan configuration updated.", vim.log.levels.INFO)
         else
@@ -252,7 +252,7 @@ function M.show_config_actions(plan_name)
       if not item then return end
 
       if item.action == "view" then
-        utils.run_in_float_term('neogrove plan config ' .. vim.fn.shellescape(plan_name))
+        utils.run_in_float_term('grove-nvim plan config ' .. vim.fn.shellescape(plan_name))
       elseif item.action == "set_model" then
         data.get_models(function(models)
           local model_items = {}
@@ -284,17 +284,17 @@ function M.picker()
     return
   end
 
-  -- Check if neogrove is available
-  local neogrove_path = vim.fn.exepath('neogrove')
-  if neogrove_path == '' then
-    vim.notify("Grove: neogrove not found in PATH", vim.log.levels.ERROR)
+  -- Check if grove-nvim is available
+  local grove_nvim_path = vim.fn.exepath('grove-nvim')
+  if grove_nvim_path == '' then
+    vim.notify("Grove: grove-nvim not found in PATH", vim.log.levels.ERROR)
     return
   end
 
   -- Fetch plan list
   vim.notify("Grove: Fetching plans...", vim.log.levels.INFO)
 
-  utils.run_command({ neogrove_path, 'plan', 'list', '--json' }, function(stdout, stderr, exit_code)
+  utils.run_command({ grove_nvim_path, 'plan', 'list', '--json' }, function(stdout, stderr, exit_code)
     if exit_code ~= 0 then
       vim.notify("Grove: Failed to list plans: " .. stderr, vim.log.levels.ERROR)
       return
@@ -365,7 +365,7 @@ function M.picker()
         preview = function(ctx)
           if ctx.item and ctx.item.plan_path then
             -- Run status command for preview
-            local preview_cmd = { neogrove_path, 'plan', 'status', ctx.item.plan_path }
+            local preview_cmd = { grove_nvim_path, 'plan', 'status', ctx.item.plan_path }
             utils.run_command(preview_cmd, function(preview_stdout, preview_stderr, preview_exit)
               if preview_exit == 0 and preview_stdout ~= "" then
                 local lines = vim.split(preview_stdout, '\n')
@@ -474,14 +474,14 @@ function M.extract_from_buffer()
           return
         end
 
-        local neogrove_path = vim.fn.exepath('neogrove')
-        if neogrove_path == '' then
-          vim.notify("Grove: neogrove not found in PATH", vim.log.levels.ERROR)
+        local grove_nvim_path = vim.fn.exepath('grove-nvim')
+        if grove_nvim_path == '' then
+          vim.notify("Grove: grove-nvim not found in PATH", vim.log.levels.ERROR)
           return
         end
 
         local cmd_args = {
-          neogrove_path, 'plan', 'init', plan_name,
+          grove_nvim_path, 'plan', 'init', plan_name,
           '--extract-all-from', extract_from,
         }
 
@@ -602,14 +602,14 @@ end
 
 -- Create the job with the collected configuration
 function M.create_job(config)
-  local neogrove_path = vim.fn.exepath('neogrove')
-  if neogrove_path == '' then
-    vim.notify("Grove: neogrove not found in PATH", vim.log.levels.ERROR)
+  local grove_nvim_path = vim.fn.exepath('grove-nvim')
+  if grove_nvim_path == '' then
+    vim.notify("Grove: grove-nvim not found in PATH", vim.log.levels.ERROR)
     return
   end
 
   local cmd_parts = {
-    neogrove_path, 'plan', 'add', config.plan,
+    grove_nvim_path, 'plan', 'add', config.plan,
     '--title', config.title,
     '--type', config.type
   }

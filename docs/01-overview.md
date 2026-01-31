@@ -19,13 +19,13 @@ Grove-nvim is a Neovim plugin that provides commands and workflows to interact w
 
 ## How It Works
 
-The plugin consists of two main components: a Lua plugin for Neovim and a Go command-line application named `neogrove`.
+The plugin consists of two main components: a Lua plugin for Neovim and a Go command-line application named `grove-nvim`.
 
 1.  **Lua Plugin (`lua/` files)**: This component runs inside Neovim. It defines user commands (e.g., `:GrovePlan`, `:GroveChatRun`) and keybindings. It is responsible for creating the user interface elements, such as input prompts and pickers, and managing editor state.
 
-2.  **Go Binary (`neogrove`)**: When a user invokes a command, the Lua code executes the `neogrove` binary with appropriate arguments. This Go application serves as an interface and wrapper.
+2.  **Go Binary (`grove-nvim`)**: When a user invokes a command, the Lua code executes the `grove-nvim` binary with appropriate arguments. This Go application serves as an interface and wrapper.
 
-3.  **Flow Execution**: The `neogrove` binary constructs and executes commands for the `flow` tool from the `grove-flow` project. It pipes standard input, output, and error streams between the `flow` process and the Neovim terminal or background job.
+3.  **Flow Execution**: The `grove-nvim` binary constructs and executes commands for the `flow` tool from the `grove-flow` project. It pipes standard input, output, and error streams between the `flow` process and the Neovim terminal or background job.
 
 ### Installation
 

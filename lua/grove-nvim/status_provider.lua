@@ -364,15 +364,15 @@ end
 
 -- Update git status cache
 local function update_git_status()
-  local neogrove_path = vim.fn.exepath("neogrove")
-  if neogrove_path == "" then
+  local grove_nvim_path = vim.fn.exepath("grove-nvim")
+  if grove_nvim_path == "" then
     return
   end
 
   local cwd = vim.fn.getcwd()
 
-  -- Run neogrove internal git-status asynchronously
-  vim.fn.jobstart({ neogrove_path, "internal", "git-status", cwd }, {
+  -- Run grove-nvim internal git-status asynchronously
+  vim.fn.jobstart({ grove_nvim_path, "internal", "git-status", cwd }, {
     stdout_buffered = true,
     on_stdout = function(_, data)
       if data then

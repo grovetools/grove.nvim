@@ -101,14 +101,14 @@ function M.select_and_ask()
   end
 
   local lang = vim.bo.filetype
-  local neogrove_path = vim.fn.exepath('neogrove')
-  if neogrove_path == '' then
-    vim.notify("Grove: neogrove executable not found in PATH.", vim.log.levels.ERROR)
+  local grove_nvim_path = vim.fn.exepath('grove-nvim')
+  if grove_nvim_path == '' then
+    vim.notify("Grove: grove-nvim executable not found in PATH.", vim.log.levels.ERROR)
     return
   end
 
   -- 1. Append the code snippet
-  local select_cmd = { neogrove_path, 'text', 'select', '--file', state.target_file, '--lang', lang }
+  local select_cmd = { grove_nvim_path, 'text', 'select', '--file', state.target_file, '--lang', lang }
   
   local job_id = vim.fn.jobstart(select_cmd, {
     on_exit = function(_, exit_code)
@@ -125,7 +125,7 @@ function M.select_and_ask()
         end
 
         -- 3. Append the question
-        local ask_cmd = { neogrove_path, 'text', 'ask', '--file', state.target_file }
+        local ask_cmd = { grove_nvim_path, 'text', 'ask', '--file', state.target_file }
         local ask_job_id = vim.fn.jobstart(ask_cmd, {
           on_exit = function(_, ask_exit_code)
             if ask_exit_code == 0 then
@@ -160,14 +160,14 @@ function M.select_ask_and_run()
   end
 
   local lang = vim.bo.filetype
-  local neogrove_path = vim.fn.exepath('neogrove')
-  if neogrove_path == '' then
-    vim.notify("Grove: neogrove executable not found in PATH.", vim.log.levels.ERROR)
+  local grove_nvim_path = vim.fn.exepath('grove-nvim')
+  if grove_nvim_path == '' then
+    vim.notify("Grove: grove-nvim executable not found in PATH.", vim.log.levels.ERROR)
     return
   end
 
   -- 1. Append the code snippet
-  local select_cmd = { neogrove_path, 'text', 'select', '--file', state.target_file, '--lang', lang }
+  local select_cmd = { grove_nvim_path, 'text', 'select', '--file', state.target_file, '--lang', lang }
   
   local job_id = vim.fn.jobstart(select_cmd, {
     on_exit = function(_, exit_code)
@@ -184,7 +184,7 @@ function M.select_ask_and_run()
         end
 
         -- 3. Append the question
-        local ask_cmd = { neogrove_path, 'text', 'ask', '--file', state.target_file }
+        local ask_cmd = { grove_nvim_path, 'text', 'ask', '--file', state.target_file }
         local ask_job_id = vim.fn.jobstart(ask_cmd, {
           on_exit = function(_, ask_exit_code)
             if ask_exit_code == 0 then

@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var chatLog = logging.NewUnifiedLogger("neogrove.chat")
+var chatLog = logging.NewUnifiedLogger("grove-nvim.chat")
 
 func newChatCmd() *cobra.Command {
 	cmd := &cobra.Command{

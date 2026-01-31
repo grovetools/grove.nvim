@@ -39,7 +39,7 @@ func setupNvimEnvironmentAndMockFlow() harness.Step {
 		}
 
 		// 2. Create mock 'flow' and 'grove' binaries
-		// neogrove chat checks for 'flow' in PATH but actually calls 'grove flow run'
+		// grove-nvim chat checks for 'flow' in PATH but actually calls 'grove flow run'
 		flowLogFile := filepath.Join(ctx.RootDir, "flow_mock.log")
 		// Create the log file first to ensure it exists
 		if err := fs.WriteString(flowLogFile, ""); err != nil {
@@ -57,7 +57,7 @@ exit 0
 		if err := os.Chmod(filepath.Join(mockBinDir, "flow"), 0755); err != nil {
 			return err
 		}
-		// Mock grove - this is what neogrove actually calls
+		// Mock grove - this is what grove-nvim actually calls
 		mockGroveScript := fmt.Sprintf(`#!/bin/bash
 # Mock 'grove' command - handles 'grove flow run' calls
 echo "[$(date)] Mock grove called" >> %s
@@ -100,14 +100,14 @@ require('grove-nvim').chat_run = function()
   vim.cmd('write')
   
   -- Use grove bin directory
-  local neogrove_path = vim.fn.expand('~/.grove/bin/neogrove')
-  if vim.fn.filereadable(neogrove_path) ~= 1 then
-    vim.notify("Grove: neogrove not found at ~/.grove/bin/neogrove", vim.log.levels.ERROR)
+  local grove_nvim_path = vim.fn.expand('~/.grove/bin/grove-nvim')
+  if vim.fn.filereadable(grove_nvim_path) ~= 1 then
+    vim.notify("Grove: grove-nvim not found at ~/.grove/bin/grove-nvim", vim.log.levels.ERROR)
     return
   end
-  
+
   -- For testing, use system() instead of terminal
-  local cmd = neogrove_path .. ' chat ' .. vim.fn.shellescape(buf_path)
+  local cmd = grove_nvim_path .. ' chat ' .. vim.fn.shellescape(buf_path)
   local output = vim.fn.system(cmd)
   print("Executed: " .. cmd)
   print("Output: " .. output)
@@ -122,24 +122,24 @@ end
 			return err
 		}
 
-		// 5. Create a fake ~/.grove/bin directory with a neogrove wrapper
+		// 5. Create a fake ~/.grove/bin directory with a grove-nvim wrapper
 		homeDir := ctx.RootDir // We'll use the root test dir as our fake HOME
 		groveBinDir := filepath.Join(homeDir, ".grove", "bin")
 		if err := fs.CreateDir(groveBinDir); err != nil {
 			return err
 		}
-		neogroveBinaryToTest, err := FindBinary()
+		groveNvimBinaryToTest, err := FindBinary()
 		if err != nil {
 			return err
 		}
-		
-		// Create a debug log file for neogrove wrapper
-		neogroveLogFile := filepath.Join(ctx.RootDir, "neogrove_wrapper.log")
-		
-		// Create a wrapper script that sets PATH and calls the real neogrove
-		neogroveWrapper := fmt.Sprintf(`#!/bin/bash
-# Wrapper script for neogrove that sets PATH to include mock flow
-echo "[$(date)] Neogrove wrapper called with args: $@" >> %s
+
+		// Create a debug log file for grove-nvim wrapper
+		groveNvimLogFile := filepath.Join(ctx.RootDir, "grove_nvim_wrapper.log")
+
+		// Create a wrapper script that sets PATH and calls the real grove-nvim
+		groveNvimWrapper := fmt.Sprintf(`#!/bin/bash
+# Wrapper script for grove-nvim that sets PATH to include mock flow
+echo "[$(date)] grove-nvim wrapper called with args: $@" >> %s
 echo "PATH before: $PATH" >> %s
 export PATH="%s:$PATH"
 echo "PATH after: $PATH" >> %s
@@ -148,22 +148,22 @@ echo "Executing: %s $@" >> %s
 exit_code=$?
 echo "Exit code: $exit_code" >> %s
 exit $exit_code
-`, neogroveLogFile, neogroveLogFile, mockBinDir, neogroveLogFile, neogroveBinaryToTest, neogroveLogFile, neogroveBinaryToTest, neogroveLogFile, neogroveLogFile)
-		
-		if err := fs.WriteString(filepath.Join(groveBinDir, "neogrove"), neogroveWrapper); err != nil {
+`, groveNvimLogFile, groveNvimLogFile, mockBinDir, groveNvimLogFile, groveNvimBinaryToTest, groveNvimLogFile, groveNvimBinaryToTest, groveNvimLogFile, groveNvimLogFile)
+
+		if err := fs.WriteString(filepath.Join(groveBinDir, "grove-nvim"), groveNvimWrapper); err != nil {
 			return err
 		}
-		if err := os.Chmod(filepath.Join(groveBinDir, "neogrove"), 0755); err != nil {
+		if err := os.Chmod(filepath.Join(groveBinDir, "grove-nvim"), 0755); err != nil {
 			return err
 		}
-		
+
 		// 6. Store paths in context for the next steps
 		ctx.Set("home_dir", homeDir)
 		ctx.Set("mock_bin_dir", mockBinDir)
 		ctx.Set("nvim_config_dir", nvimConfigDir)
 		ctx.Set("test_project_dir", testProjectDir)
 		ctx.Set("flow_log_file", flowLogFile)
-		ctx.Set("neogrove_log_file", neogroveLogFile)
+		ctx.Set("grove_nvim_log_file", groveNvimLogFile)
 
 		return nil
 	})
@@ -226,13 +226,13 @@ func verifyFlowCommandWasCalled() harness.Step {
 
 		// Check if grove was called at all
 		if content == "" {
-			// Check neogrove wrapper log for debugging
-			neogroveLogPath := ctx.GetString("neogrove_log_file")
-			neogroveLog, _ := fs.ReadString(neogroveLogPath)
-			if neogroveLog == "" {
-				return fmt.Errorf("grove mock log file is empty and neogrove wrapper was not called")
+			// Check grove-nvim wrapper log for debugging
+			groveNvimLogPath := ctx.GetString("grove_nvim_log_file")
+			groveNvimLog, _ := fs.ReadString(groveNvimLogPath)
+			if groveNvimLog == "" {
+				return fmt.Errorf("grove mock log file is empty and grove-nvim wrapper was not called")
 			}
-			return fmt.Errorf("grove mock log file is empty - grove command was not called\nNeogrove wrapper log:\n%s", neogroveLog)
+			return fmt.Errorf("grove mock log file is empty - grove command was not called\ngrove-nvim wrapper log:\n%s", groveNvimLog)
 		}
 
 		// Check for the expected command - looking for "Arguments: flow run <path>"
