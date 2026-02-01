@@ -1,5 +1,49 @@
 local M = {}
 
+-- Get the Grove bin directory following XDG spec.
+-- Resolution order:
+-- 1. GROVE_BIN env var (explicit override)
+-- 2. GROVE_HOME env var → $GROVE_HOME/data/bin
+-- 3. XDG_DATA_HOME env var → $XDG_DATA_HOME/grove/bin
+-- 4. Fall back to ~/.local/share/grove/bin
+function M.get_grove_bin_dir()
+  local grove_bin = os.getenv('GROVE_BIN')
+  if grove_bin and grove_bin ~= '' then
+    return grove_bin
+  end
+
+  local grove_home = os.getenv('GROVE_HOME')
+  if grove_home and grove_home ~= '' then
+    return grove_home .. '/data/bin'
+  end
+
+  local xdg_data_home = os.getenv('XDG_DATA_HOME')
+  if xdg_data_home and xdg_data_home ~= '' then
+    return xdg_data_home .. '/grove/bin'
+  end
+
+  return vim.fn.expand('~/.local/share/grove/bin')
+end
+
+-- Get the path to the grove-nvim binary.
+-- First tries the grove bin directory, then falls back to exepath.
+function M.get_grove_nvim_binary()
+  local bin_dir = M.get_grove_bin_dir()
+  local binary_path = bin_dir .. '/grove-nvim'
+
+  if vim.fn.filereadable(binary_path) == 1 then
+    return binary_path
+  end
+
+  -- Fall back to checking PATH
+  local path_binary = vim.fn.exepath('grove-nvim')
+  if path_binary ~= '' then
+    return path_binary
+  end
+
+  return nil
+end
+
 -- Format bytes into human-readable format
 function M.format_bytes(bytes)
 	if bytes < 1024 then

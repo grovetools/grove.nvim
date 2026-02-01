@@ -161,10 +161,11 @@ function M.chat_run(args)
   -- Save the file before running
   vim.cmd('silent write')
 
-  -- Use grove bin directory
-  local grove_nvim_path = vim.fn.expand('~/.grove/bin/grove-nvim')
-  if vim.fn.filereadable(grove_nvim_path) ~= 1 then
-    vim.notify("Grove: grove-nvim not found at ~/.grove/bin/grove-nvim", vim.log.levels.ERROR)
+  -- Find the grove-nvim binary using XDG paths
+  local utils = require('grove-nvim.utils')
+  local grove_nvim_path = utils.get_grove_nvim_binary()
+  if not grove_nvim_path then
+    vim.notify("Grove: grove-nvim not found. Check that it's installed in " .. utils.get_grove_bin_dir(), vim.log.levels.ERROR)
     return
   end
 

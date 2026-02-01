@@ -99,10 +99,10 @@ require('grove-nvim').chat_run = function()
   -- Save the file before running
   vim.cmd('write')
   
-  -- Use grove bin directory
-  local grove_nvim_path = vim.fn.expand('~/.grove/bin/grove-nvim')
+  -- Use XDG-compliant grove bin directory
+  local grove_nvim_path = vim.fn.expand('~/.local/share/grove/bin/grove-nvim')
   if vim.fn.filereadable(grove_nvim_path) ~= 1 then
-    vim.notify("Grove: grove-nvim not found at ~/.grove/bin/grove-nvim", vim.log.levels.ERROR)
+    vim.notify("Grove: grove-nvim not found at ~/.local/share/grove/bin/grove-nvim", vim.log.levels.ERROR)
     return
   end
 
@@ -122,9 +122,9 @@ end
 			return err
 		}
 
-		// 5. Create a fake ~/.grove/bin directory with a grove-nvim wrapper
+		// 5. Create a fake XDG-compliant grove bin directory with a grove-nvim wrapper
 		homeDir := ctx.RootDir // We'll use the root test dir as our fake HOME
-		groveBinDir := filepath.Join(homeDir, ".grove", "bin")
+		groveBinDir := filepath.Join(homeDir, ".local", "share", "grove", "bin")
 		if err := fs.CreateDir(groveBinDir); err != nil {
 			return err
 		}
