@@ -1,3 +1,74 @@
+## v0.6.0 (2026-02-02)
+
+The plugin now delegates interactive UI tasks to grove's bubbltea TUIs, replacing Lua-based forms to centralize logic and improve consistency (05c37e3). This transition streamlines the initialization of plans and job creation while removing the redundant keymaps.
+
+Binary discovery has been updated to follow XDG standards, prioritizing `GROVE_BIN`, `GROVE_HOME`, and `XDG_DATA_HOME` environment variables for better system integration (541df5a).
+
+Repository maintenance includes migrating the configuration from YAML to TOML (cc72c62), adding an MIT License (160f2d8), and reorganizing documentation assets and rules into dedicated directories (beb3b85, 84aa0a1, 93b467a).
+
+### Features
+*   Update docs json (90cee9e)
+
+### Bug Fixes
+*   Remove headers and images from overview documentation (2faa50a)
+
+### Code Refactoring
+*   Replace Lua UI forms with flow TUI commands (05c37e3)
+*   Use XDG-compliant paths for binary discovery (541df5a)
+*   Update docgen title to match package name (6619e3c)
+
+### Documentation
+*   Add concept lookup instructions to CLAUDE.md (79036ad)
+*   Update readme and overview content (bc35790)
+
+### Chores
+*   Add MIT License (160f2d8)
+*   Migrate grove.yml to grove.toml (cc72c62)
+*   Replace binary name and update README (d514d8a)
+*   Move README template to notebook (beb3b85)
+*   Remove docgen files from repo (84aa0a1)
+*   Move docs.rules to .cx/ directory (93b467a)
+*   Update go.mod for grovetools migration (40666a8)
+
+### File Changes
+
+```
+ .cx/docs.rules                                 |  16 +
+ .github/workflows/release.yml                  |  89 ----
+ .gitignore                                     |   2 +-
+ CLAUDE.md                                      |  15 +-
+ LICENSE                                        |  21 +
+ Makefile                                       |  14 +-
+ README.md                                      |  64 +--
+ cmd/chat.go                                    |   2 +-
+ cmd/plan.go                                    | 107 +----
+ cmd/root.go                                    |   2 +-
+ docs/01-overview.md                            |  66 +--
+ docs/03-examples.md                            |  10 +-
+ docs/README.md.tpl                             |   6 -
+ docs/docgen.config.yml                         |  34 --
+ docs/docs.rules                                |   1 -
+ go.mod                                         |   9 +-
+ go.sum                                         |  49 +-
+ grove.toml                                     |  11 +
+ grove.yml                                      |  12 -
+ lua/grove-nvim/data.lua                        |  43 +-
+ lua/grove-nvim/flow.lua                        | 633 +------------------------
+ lua/grove-nvim/init.lua                        |  21 +-
+ lua/grove-nvim/status_provider.lua             |   8 +-
+ lua/grove-nvim/text.lua                        |  20 +-
+ lua/grove-nvim/ui.lua                          | 254 ----------
+ lua/grove-nvim/utils.lua                       |  44 ++
+ lua/grove-nvim/workspace.lua                   |  10 +-
+ pkg/docs/docs.json                             |  26 +-
+ plugin/grove.lua                               |  18 +-
+ tests/e2e/scenarios_nvim.go                    |  62 +--
+ tests/e2e/scenarios_text_interaction.go        |  20 +-
+ tests/e2e/scenarios_text_interaction_simple.go |  16 +-
+ tests/e2e/test_utils.go                        |  16 +-
+ 33 files changed, 385 insertions(+), 1336 deletions(-)
+```
+
 ## v0.1.1-nightly.9de9a75 (2025-10-03)
 
 ## v0.1.0 (2025-10-01)
