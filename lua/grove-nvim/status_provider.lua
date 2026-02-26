@@ -9,6 +9,15 @@ M.state = {
 }
 
 local timers = {}
+
+-- Track which polling jobs are currently executing to prevent overlapping spawns
+local active_jobs = {
+  context = false,
+  rules = false,
+  plan = false,
+  current_job = false,
+  git = false,
+}
 local last_md_buffer = nil  -- Track the last markdown buffer for context updates
 
 -- A mapping from flow status strings to UI elements
@@ -43,6 +52,8 @@ end
 
 -- Update context size cache
 local function update_context_size()
+  if active_jobs.context then return end
+
   local cx_path = vim.fn.exepath("cx")
   if cx_path == "" then
     return
@@ -61,6 +72,8 @@ local function update_context_size()
     -- No markdown buffer to work with
     return
   end
+
+  active_jobs.context = true
 
   -- Run cx stats asynchronously
   vim.fn.jobstart({ cx_path, "stats", "--chat-file", buf_path }, {
@@ -117,15 +130,22 @@ local function update_context_size()
         end
       end
     end,
+    on_exit = function()
+      active_jobs.context = false
+    end,
   })
 end
 
 -- Update rules file cache
 local function update_rules_file()
+  if active_jobs.rules then return end
+
   local cx_path = vim.fn.exepath("cx")
   if cx_path == "" then
     return
   end
+
+  active_jobs.rules = true
 
   -- Run cx rules print-path to get active rules file path
   vim.fn.jobstart({ cx_path, "rules", "print-path" }, {
@@ -159,11 +179,16 @@ local function update_rules_file()
         end
       end
     end,
+    on_exit = function()
+      active_jobs.rules = false
+    end,
   })
 end
 
 -- Update status of the currently focused job file
 local function update_current_job_status()
+  if active_jobs.current_job then return end
+
   local flow_path = vim.fn.exepath("flow")
   if flow_path == "" then
     return
@@ -178,6 +203,8 @@ local function update_current_job_status()
     return
   end
   current_buf_path = vim.fn.fnamemodify(current_buf_path, ":p")
+
+  active_jobs.current_job = true
 
   vim.fn.jobstart({ flow_path, "plan", "status", "--json" }, {
     stdout_buffered = true,
@@ -228,15 +255,22 @@ local function update_current_job_status()
     on_stderr = function()
       -- Don't clear status on error, prevents flickering if no active plan
     end,
+    on_exit = function()
+      active_jobs.current_job = false
+    end,
   })
 end
 
 -- Update plan status cache
 local function update_plan_status()
+  if active_jobs.plan then return end
+
   local flow_path = vim.fn.exepath("flow")
   if flow_path == "" then
     return
   end
+
+  active_jobs.plan = true
 
   -- Simply call flow plan status --json (works from any directory if plan is set)
   vim.fn.jobstart({ flow_path, "plan", "status", "--json" }, {
@@ -359,17 +393,24 @@ local function update_plan_status()
       -- Don't clear on stderr - the command might just not have an active plan
       -- Keep existing data to prevent flashing
     end,
+    on_exit = function()
+      active_jobs.plan = false
+    end,
   })
 end
 
 -- Update git status cache
 local function update_git_status()
+  if active_jobs.git then return end
+
   local grove_nvim_path = vim.fn.exepath("grove-nvim")
   if grove_nvim_path == "" then
     return
   end
 
   local cwd = vim.fn.getcwd()
+
+  active_jobs.git = true
 
   -- Run grove-nvim internal git-status asynchronously
   vim.fn.jobstart({ grove_nvim_path, "internal", "git-status", cwd }, {
@@ -399,6 +440,9 @@ local function update_git_status()
     end,
     on_stderr = function()
       -- Silently ignore stderr
+    end,
+    on_exit = function()
+      active_jobs.git = false
     end,
   })
 end
