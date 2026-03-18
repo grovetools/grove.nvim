@@ -236,6 +236,10 @@ function M._process_line(line)
   if update.workspaces then
     for _, ws in ipairs(update.workspaces) do
       if ws.path then
+        -- Merge stream data into cached workspace, preserving locally-polled git_status
+        local existing = M.state.workspaces[ws.path]
+        local local_git = existing and existing.git_status
+        ws.git_status = local_git  -- keep poll's git data, discard daemon's
         M.state.workspaces[ws.path] = ws
       end
     end
@@ -258,6 +262,48 @@ function M._process_line(line)
       end
     end
   end
+end
+
+-- Lightweight git-status poll for the current workspace.
+-- The daemon stream provides git data but on a slow enrichment cycle (~30s).
+-- This poll keeps it responsive for the active workspace only.
+local git_poll_timer = nil
+local git_poll_active = false
+
+local function poll_git_status()
+  if git_poll_active then return end
+
+  local utils = require('grove-nvim.utils')
+  local grove_nvim_path = utils.get_grove_nvim_binary()
+  if not grove_nvim_path then return end
+
+  local ws = M.get_current_workspace()
+  if not ws or not ws.path then return end
+
+  git_poll_active = true
+
+  vim.fn.jobstart({ grove_nvim_path, "internal", "git-status", ws.path }, {
+    stdout_buffered = true,
+    on_stdout = function(_, data)
+      if not data then return end
+      local stdout = table.concat(data, "\n")
+      local ok, status = pcall(vim.json.decode, stdout)
+      if ok and status and not vim.tbl_isempty(status) then
+        local cached = M.state.workspaces[ws.path]
+        if cached then
+          local old = cached.git_status
+          local changed = not old or vim.json.encode(old) ~= vim.json.encode(status)
+          cached.git_status = status
+          if changed then
+            notify_update()
+          end
+        end
+      end
+    end,
+    on_exit = function()
+      git_poll_active = false
+    end,
+  })
 end
 
 function M.start()
@@ -317,12 +363,22 @@ function M.start()
       vim.defer_fn(M.start, 5000)
     end
   })
+
+  -- Start git-status poll (3s interval, same as the old timer)
+  if not git_poll_timer then
+    poll_git_status() -- initial fetch
+    git_poll_timer = vim.fn.timer_start(3000, poll_git_status, { ['repeat'] = -1 })
+  end
 end
 
 function M.stop()
   if stream_job_id then
     vim.fn.jobstop(stream_job_id)
     stream_job_id = nil
+  end
+  if git_poll_timer then
+    vim.fn.timer_stop(git_poll_timer)
+    git_poll_timer = nil
   end
 end
 
