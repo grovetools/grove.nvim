@@ -5,7 +5,6 @@ local provider = require("grove-nvim.status_provider")
 
 -- State for background job
 local running_job = nil
-local spinner_timer = nil
 
 -- Highlight groups setup
 local highlights_defined = false
@@ -174,69 +173,50 @@ function M.chat_run(args)
     if running_job and vim.fn.jobstatus(running_job) == 'run' then
       vim.fn.jobstop(running_job)
     end
-    
-    -- Show spinner in statusline
-    vim.g.grove_chat_running = true
-    vim.cmd('silent! redrawstatus')
-    
-    -- Start spinner animation timer
-    if spinner_timer then
-      vim.fn.timer_stop(spinner_timer)
-    end
-    spinner_timer = vim.fn.timer_start(100, function()
-      vim.cmd('silent! redrawstatus')
-    end, {['repeat'] = -1})
-    
+
     -- Collect stderr for error reporting
     local stderr_output = {}
 
-    -- Run in background
+    -- Run in background via daemon (fire-and-forget submission).
+    -- The daemon handles execution asynchronously — the process exits immediately
+    -- after submitting the job. The "running" directive stays in the buffer until
+    -- the daemon completes the job and flow writes the response.
     running_job = vim.fn.jobstart({grove_nvim_path, 'chat', buf_path}, {
       on_exit = function(_, exit_code)
-        vim.g.grove_chat_running = false
-        -- Stop the spinner timer
-        if spinner_timer then
-          vim.fn.timer_stop(spinner_timer)
-          spinner_timer = nil
-        end
         vim.cmd('silent! redrawstatus')
 
         vim.schedule(function()
           if exit_code == 0 then
-            -- Reload the buffer to show the updated content
-            vim.cmd('silent! checktime')
-
-            -- Remove any orphaned running directives
-            local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
-            for i = #lines, 1, -1 do
-              local json_str = lines[i]:match("%s*<!%-%- grove: (.-) %-%->%s*")
+            -- Job was submitted to daemon successfully.
+            -- Don't clean up running directives — the daemon will handle the
+            -- file content when the job completes. The chat_ui file watcher
+            -- or manual :checktime will pick up the changes.
+            vim.api.nvim_echo({{"Grove: Job submitted to daemon", "Normal"}}, false, {})
+          else
+            -- Daemon submission failed — clean up running directive since
+            -- no job will run to replace it.
+            local cur_lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+            for i = #cur_lines, 1, -1 do
+              local json_str = cur_lines[i]:match("%s*<!%-%- grove: (.-) %-%->%s*")
               if json_str then
-                local ok, data = pcall(vim.json.decode, json_str)
-                if ok and type(data) == "table" and data.state == "running" then
-                  -- Remove the running directive and any blank line before it
+                local parse_ok, directive_data = pcall(vim.json.decode, json_str)
+                if parse_ok and type(directive_data) == "table" and directive_data.state == "running" then
                   local start_line = i - 1
-                  if start_line > 0 and lines[start_line]:match("^%s*$") then
-                    -- Remove blank line + directive
+                  if start_line > 0 and cur_lines[start_line]:match("^%s*$") then
                     vim.api.nvim_buf_set_lines(bufnr, start_line - 1, i, false, {})
                   else
-                    -- Just remove the directive
                     vim.api.nvim_buf_set_lines(bufnr, i - 1, i, false, {})
                   end
-                  -- Save after cleanup
                   vim.cmd('silent write')
                   break
                 end
               end
             end
 
-            -- Use echo instead of notify to avoid press ENTER prompt
-            vim.api.nvim_echo({{"Grove: Chat completed", "Normal"}}, false, {})
-          else
             -- Show error with stderr output if available
-            local error_msg = "Grove: Chat failed with exit code " .. exit_code
+            local error_msg = "Grove: Daemon submission failed (exit " .. exit_code .. ")"
             local stderr_text = table.concat(stderr_output, "")
             if stderr_text ~= "" then
-              -- Use vim.notify for multi-line error messages so user can see the full error
               vim.notify(error_msg .. "\n" .. stderr_text, vim.log.levels.ERROR)
             else
               vim.api.nvim_echo({{error_msg, "ErrorMsg"}}, false, {})
@@ -361,8 +341,8 @@ end
 --- Get status for statusline integration
 --- @return string Status string, empty if not running
 function M.status()
-  if vim.g.grove_chat_running then
-    -- Simple spinner animation
+  local current_job = provider.get_current_job()
+  if current_job and current_job.status == "running" then
     local spinners = {'⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'}
     local ms = vim.loop.hrtime() / 1000000
     local frame = math.floor(ms / 100) % #spinners
@@ -376,7 +356,8 @@ end
 function M.current_job_status_component()
   return {
     function()
-      local status = provider.state.current_job_status
+      local current_job = provider.get_current_job()
+      local status = provider.format_job_status(current_job)
       if not status then return "" end
 
       local cfg = config.options.ui.lualine.job
@@ -412,7 +393,7 @@ function M.current_job_status_component()
     cond = function()
       -- Hide if native status bar is enabled
       if config.options.ui.status_bar.enable then return false end
-      return provider.state.current_job_status ~= nil
+      return provider.get_current_job() ~= nil
     end,
   }
 end
@@ -424,7 +405,8 @@ function M.context_size_component()
 
   return {
     function()
-      local cache = provider.state.context_size
+      local ws = provider.get_current_workspace()
+      local cache = ws and provider.format_context_size(ws.cx_stats)
       if type(cache) == "table" and cache.display then
         local cfg = config.options.ui.lualine.context
         local parts = {}
@@ -483,7 +465,8 @@ end
 function M.plan_status_component()
   return {
     function()
-      local stats = provider.state.plan_status
+      local ws = provider.get_current_workspace()
+      local stats = ws and provider.format_plan_status(ws.plan_stats)
       if not stats or type(stats) ~= "table" then
         return ""
       end
@@ -491,7 +474,7 @@ function M.plan_status_component()
       local cfg = config.options.ui.lualine.plan
       local parts = {}
 
-      for i, stat in ipairs(stats) do
+      for _, stat in ipairs(stats) do
         -- First item is plan name (hl = "Normal")
         if stat.hl == "Normal" then
           if cfg.show_name then
@@ -500,7 +483,6 @@ function M.plan_status_component()
         else
           -- Numeric stats
           if cfg.show_stats then
-            -- Use %#HlGroup# syntax for inline highlighting
             table.insert(parts, "%#" .. stat.hl .. "#" .. stat.text .. "%*")
           end
         end
@@ -514,8 +496,8 @@ function M.plan_status_component()
     cond = function()
       -- Hide if native status bar is enabled
       if config.options.ui.status_bar.enable then return false end
-      -- Only show when there's active plan status
-      local stats = provider.state.plan_status
+      local ws = provider.get_current_workspace()
+      local stats = ws and provider.format_plan_status(ws.plan_stats)
       return stats and type(stats) == "table" and #stats > 0
     end,
   }
@@ -713,7 +695,8 @@ function M.git_changes_component()
 
   return {
     function()
-      local status = provider.state.git_status
+      local ws = provider.get_current_workspace()
+      local status = ws and ws.git_status
       if not status then
         return ""
       end
@@ -765,7 +748,8 @@ function M.git_changes_component()
     cond = function()
       -- Hide if native status bar is enabled
       if config.options.ui.status_bar.enable then return false end
-      return provider.state.git_status ~= nil
+      local ws = provider.get_current_workspace()
+      return ws and ws.git_status ~= nil
     end,
   }
 end

@@ -31,30 +31,25 @@ end
 
 local function get_bar_content()
   local all_parts = {}
-  local p_state = provider.state
+  local ws = provider.get_current_workspace()
 
-  -- Plan status (show first - aggregate plan data)
-  if p_state.plan_status and #p_state.plan_status > 0 then
+  -- Plan status from current workspace
+  local plan_status = ws and provider.format_plan_status(ws.plan_stats)
+  if plan_status and #plan_status > 0 then
     local plan_part_items = {}
-    -- Format plan status with icon
-    for _, stat in ipairs(p_state.plan_status) do
+    for _, stat in ipairs(plan_status) do
       table.insert(plan_part_items, stat.text)
     end
     local plan_part = "Plan: 󰠡 " .. table.concat(plan_part_items, " ")
-    -- Add plan-level model if all jobs use the same model
-    if p_state.plan_model and p_state.plan_model ~= "" then
-      plan_part = plan_part .. " 󰚩 " .. p_state.plan_model
-    end
     table.insert(all_parts, plan_part)
   end
 
-  -- Git status
-  if p_state.git_status then
-    local status = p_state.git_status
+  -- Git status from current workspace
+  if ws and ws.git_status then
+    local status = ws.git_status
     local git_parts = {}
 
     if status.is_dirty then
-      -- Show changes when repo is dirty
       local is_main = status.branch == "main" or status.branch == "master"
       if not is_main and (status.ahead_main_count > 0 or status.behind_main_count > 0) then
         if status.ahead_main_count > 0 then table.insert(git_parts, "⇡" .. status.ahead_main_count) end
@@ -69,56 +64,48 @@ local function get_bar_content()
       if status.lines_added > 0 then table.insert(git_parts, "+" .. status.lines_added) end
       if status.lines_deleted > 0 then table.insert(git_parts, "-" .. status.lines_deleted) end
     else
-      -- Show checkmark when clean
       table.insert(git_parts, "✓")
     end
 
     if #git_parts > 0 then
       local git_part = "Git: 󰊢 " .. table.concat(git_parts, " ")
-      -- Add (worktree) indicator if applicable
-      if p_state.has_worktree then
-        git_part = git_part .. " (worktree)"
-      end
       table.insert(all_parts, git_part)
     end
   end
 
-  -- Current job filename and status
-  if p_state.current_job_status then
+  -- Current job status (match by current buffer filename)
+  local current_job = provider.get_current_job()
+  local current_job_status = provider.format_job_status(current_job)
+  if current_job_status then
     local job_part = "Job: "
-    if p_state.current_job_status.filename ~= "" then
-      -- Add job type icon before filename
-      local type_icon = p_state.current_job_status.type_icon or ""
+    if current_job_status.filename ~= "" then
+      local type_icon = current_job_status.type_icon or ""
       if type_icon ~= "" then
-        job_part = job_part .. type_icon .. " " .. p_state.current_job_status.filename
+        job_part = job_part .. type_icon .. " " .. current_job_status.filename
       else
-        job_part = job_part .. p_state.current_job_status.filename
+        job_part = job_part .. current_job_status.filename
       end
-      -- Add template if present
-      if p_state.current_job_status.template and p_state.current_job_status.template ~= "" then
-        job_part = job_part .. " (" .. p_state.current_job_status.template .. ")"
+      if current_job_status.template and current_job_status.template ~= "" then
+        job_part = job_part .. " (" .. current_job_status.template .. ")"
       end
       job_part = job_part .. " "
     end
-    job_part = job_part .. p_state.current_job_status.icon .. " " .. p_state.current_job_status.status
+    job_part = job_part .. current_job_status.icon .. " " .. current_job_status.status
 
-    -- Add model only if it differs from the plan-level model
-    if p_state.current_job_status.model and p_state.current_job_status.model ~= "" then
-      if not p_state.plan_model or p_state.current_job_status.model ~= p_state.plan_model then
-        job_part = job_part .. " 󰚩 " .. p_state.current_job_status.model
-      end
+    if current_job_status.model and current_job_status.model ~= "" then
+      job_part = job_part .. " 󰚩 " .. current_job_status.model
     end
 
     table.insert(all_parts, job_part)
   end
 
-  if p_state.context_size then
-    -- Remove "cx:" prefix from display
-    local ctx_display = p_state.context_size.display:gsub("^cx:", "")
+  -- Context size from current workspace
+  local context_size = ws and provider.format_context_size(ws.cx_stats)
+  if context_size then
+    local ctx_display = context_size.display:gsub("^cx:", "")
     local ctx_part = "Context: 󰄨 " .. ctx_display
-    -- Add rules file in parens if present
-    if p_state.rules_file then
-      ctx_part = ctx_part .. " (" .. p_state.rules_file .. ")"
+    if provider.state.rules_file then
+      ctx_part = ctx_part .. " (" .. provider.state.rules_file .. ")"
     end
     table.insert(all_parts, ctx_part)
   end
@@ -245,8 +232,14 @@ local function do_refresh()
   vim.cmd("highlight default GroveStatusGitAdded guifg=#98c379") -- Green/Add
   vim.cmd("highlight default GroveStatusGitDeleted guifg=#e06c75") -- Red/Delete
 
+  -- Pre-compute workspace-derived data for highlights
+  local ws = provider.get_current_workspace()
+  local plan_status = ws and provider.format_plan_status(ws.plan_stats)
+  local current_job = provider.get_current_job()
+  local current_job_status = provider.format_job_status(current_job)
+  local context_size = ws and provider.format_context_size(ws.cx_stats)
+
   for line_idx, padded_content in ipairs(padded_content_lines) do
-    local p_state = provider.state
     local current_line_num = line_idx - 1
 
     -- Highlight separators (│)
@@ -260,10 +253,10 @@ local function do_refresh()
     end
 
     -- Highlight current job status icon only
-    if p_state.current_job_status and vim.fn.stridx(padded_content, "Job:") >= 0 then
+    if current_job_status and vim.fn.stridx(padded_content, "Job:") >= 0 then
       local job_label_start = vim.fn.stridx(padded_content, "Job:")
       if job_label_start >= 0 then
-        local icon = p_state.current_job_status.icon
+        local icon = current_job_status.icon
         local search_start = job_label_start + #"Job:"
         local remaining_content = string.sub(padded_content, search_start + 1)
         local icon_pos = vim.fn.stridx(remaining_content, icon)
@@ -273,7 +266,7 @@ local function do_refresh()
           vim.api.nvim_buf_add_highlight(
             state.buf,
             0,
-            p_state.current_job_status.icon_hl,
+            current_job_status.icon_hl,
             current_line_num,
             byte_start,
             byte_end
@@ -281,8 +274,8 @@ local function do_refresh()
         end
 
         -- Highlight template in parentheses if present
-        if p_state.current_job_status.template and p_state.current_job_status.template ~= "" then
-          local template_pattern = "(" .. p_state.current_job_status.template .. ")"
+        if current_job_status.template and current_job_status.template ~= "" then
+          local template_pattern = "(" .. current_job_status.template .. ")"
           local template_start = vim.fn.stridx(padded_content, template_pattern)
           if template_start >= 0 then
             vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusMuted", current_line_num, template_start, template_start + #template_pattern)
@@ -292,16 +285,16 @@ local function do_refresh()
     end
 
     -- Highlight plan status parts
-    if p_state.plan_status and #p_state.plan_status > 0 and vim.fn.stridx(padded_content, "Plan:") >= 0 then
+    if plan_status and #plan_status > 0 and vim.fn.stridx(padded_content, "Plan:") >= 0 then
       local plan_icon = "󰠡 "
       local plan_byte_start = vim.fn.stridx(padded_content, plan_icon)
       if plan_byte_start >= 0 then
         local byte_offset = plan_byte_start + #plan_icon
-        for i, stat in ipairs(p_state.plan_status) do
+        for i, stat in ipairs(plan_status) do
           local text_byte_len = #stat.text
           vim.api.nvim_buf_add_highlight(state.buf, 0, stat.hl, current_line_num, byte_offset, byte_offset + text_byte_len)
           byte_offset = byte_offset + text_byte_len
-          if i < #p_state.plan_status then
+          if i < #plan_status then
             byte_offset = byte_offset + 1
           end
         end
@@ -309,34 +302,28 @@ local function do_refresh()
     end
 
     -- Highlight context size
-    if p_state.context_size and vim.fn.stridx(padded_content, "Context:") >= 0 then
-      local ctx_pattern = p_state.context_size.display:gsub("^cx:", "")
+    if context_size and vim.fn.stridx(padded_content, "Context:") >= 0 then
+      local ctx_pattern = context_size.display:gsub("^cx:", "")
       local ctx_byte_start = vim.fn.stridx(padded_content, ctx_pattern)
       if ctx_byte_start >= 0 then
         local ctx_byte_end = ctx_byte_start + #ctx_pattern
         vim.api.nvim_buf_add_highlight(
           state.buf,
           0,
-          p_state.context_size.hl_group,
+          context_size.hl_group,
           current_line_num,
           ctx_byte_start,
           ctx_byte_end
         )
       end
-      if p_state.rules_file then
-        local rules_pattern = "(" .. p_state.rules_file .. ")"
+      if provider.state.rules_file then
+        local rules_pattern = "(" .. provider.state.rules_file .. ")"
         local rules_byte_start = vim.fn.stridx(padded_content, rules_pattern)
         if rules_byte_start >= 0 then
           local rules_byte_end = rules_byte_start + #rules_pattern
           vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusMuted", current_line_num, rules_byte_start, rules_byte_end)
         end
       end
-    end
-
-    -- Highlight (worktree) text in plan section
-    local worktree_start = vim.fn.stridx(padded_content, "(worktree)")
-    if worktree_start >= 0 then
-      vim.api.nvim_buf_add_highlight(state.buf, 0, "GroveStatusMuted", current_line_num, worktree_start, worktree_start + #"(worktree)")
     end
 
     -- Apply labels
@@ -349,8 +336,8 @@ local function do_refresh()
     end
 
     -- Highlight git status parts
-    if p_state.git_status and p_state.git_status.is_dirty and vim.fn.stridx(padded_content, "Git:") >= 0 then
-      local status = p_state.git_status
+    if ws and ws.git_status and ws.git_status.is_dirty and vim.fn.stridx(padded_content, "Git:") >= 0 then
+      local status = ws.git_status
       local git_highlights = {}
       local is_main = status.branch == "main" or status.branch == "master"
       if not is_main and (status.ahead_main_count > 0 or status.behind_main_count > 0) then

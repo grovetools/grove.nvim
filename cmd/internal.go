@@ -14,8 +14,9 @@ import (
 	"github.com/grovetools/core/config"
 	"github.com/grovetools/core/git"
 	grovelogging "github.com/grovetools/core/logging"
-	"github.com/grovetools/core/util/pathutil"
+	"github.com/grovetools/core/pkg/daemon"
 	"github.com/grovetools/core/pkg/workspace"
+	"github.com/grovetools/core/util/pathutil"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -80,7 +81,63 @@ func newInternalCmd() *cobra.Command {
 	}
 	cmd.AddCommand(newResolveAliasesCmd())
 	cmd.AddCommand(newGitStatusCmd())
+	cmd.AddCommand(newStreamStateCmd())
 	return cmd
+}
+
+func newStreamStateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "stream-state [cwd]",
+		Short: "Stream daemon state updates as JSON lines, filtered to relevant workspaces",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cwd := ""
+			if len(args) > 0 {
+				cwd = args[0]
+			} else {
+				var err error
+				cwd, err = os.Getwd()
+				if err != nil {
+					return fmt.Errorf("get working directory: %w", err)
+				}
+			}
+
+			client := daemon.NewWithAutoStart()
+			defer client.Close()
+
+			if !client.IsRunning() {
+				return fmt.Errorf("daemon is not running")
+			}
+
+			stream, err := client.StreamState(cmd.Context())
+			if err != nil {
+				return fmt.Errorf("failed to stream state: %w", err)
+			}
+
+			encoder := json.NewEncoder(os.Stdout)
+			for update := range stream {
+				// Filter workspaces to only those relevant to cwd
+				if len(update.Workspaces) > 0 {
+					filtered := update.Workspaces[:0]
+					for _, ws := range update.Workspaces {
+						if strings.HasPrefix(cwd, ws.Path) || strings.HasPrefix(ws.Path, cwd) {
+							filtered = append(filtered, ws)
+						}
+					}
+					if len(filtered) == 0 {
+						continue // Had workspaces but none relevant — skip
+					}
+					update.Workspaces = filtered
+				}
+
+				if err := encoder.Encode(update); err != nil {
+					return err
+				}
+			}
+
+			return nil
+		},
+	}
 }
 
 func newResolveAliasesCmd() *cobra.Command {
