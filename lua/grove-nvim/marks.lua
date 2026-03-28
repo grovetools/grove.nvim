@@ -57,7 +57,7 @@ local function get_active_rules_path()
 
 	-- Use cx rules print-path to resolve the active rules file
 	-- This handles notebook paths, state, and legacy fallback
-	local cx_path = vim.fn.expand('~/.grove/bin/cx')
+	local cx_path = vim.fn.exepath('cx')
 	if vim.fn.executable(cx_path) == 1 then
 		local result = vim.fn.systemlist(cx_path .. ' rules print-path')
 		if vim.v.shell_error == 0 and result[1] and result[1] ~= '' then
