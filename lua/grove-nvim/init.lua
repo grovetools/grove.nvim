@@ -566,7 +566,7 @@ function M.edit_context_rules()
       -- Rules file doesn't exist, ask if user wants to create it
       local choice = vim.fn.confirm(
         'Job-specific rules file not found: ' .. rules_file .. '\nCreate it?',
-        '&Yes\n&No\n&Edit .grove/rules instead',
+        '&Yes\n&No\n&Edit active rules instead',
         1
       )
 
@@ -601,60 +601,21 @@ function M.edit_context_rules()
   end
 
   -- No job-specific rules, or user chose to edit .grove/rules
-  -- First, check if there's an active rule set in state
-  local current_dir = vim.fn.getcwd()
-
-  -- Try to read the state to find active rules source
-  -- Walk up directories to find .grove/state.yml
-  local search_dir = current_dir
-  local state_file = nil
-  local project_root = nil
-  local max_depth = 10
-  local depth = 0
-
-  while depth < max_depth do
-    local candidate_state = search_dir .. '/.grove/state.yml'
-    if vim.fn.filereadable(candidate_state) == 1 then
-      state_file = candidate_state
-      project_root = search_dir
-      break
-    end
-
-    -- Go up one directory
-    local parent = vim.fn.fnamemodify(search_dir, ':h')
-    if parent == search_dir then
-      -- Reached root
-      break
-    end
-    search_dir = parent
-    depth = depth + 1
-  end
-
-  local active_rules_source = nil
-
-  if state_file then
-    -- Read state file and look for context.active_rules_source
-    local state_lines = vim.fn.readfile(state_file)
-    for _, line in ipairs(state_lines) do
-      local source = line:match('context%.active_rules_source:%s*"?([^"]+)"?')
-      if source then
-        active_rules_source = source
-        break
-      end
-    end
-  end
-
-  -- If we found an active rules source in state, use that
-  if active_rules_source and project_root then
-    local rules_path = project_root .. '/' .. active_rules_source
-    if vim.fn.filereadable(rules_path) == 1 then
+  -- Use cx rules print-path to resolve the active rules file
+  -- This handles notebook paths, state, and legacy fallback
+  local cx_path = vim.fn.expand('~/.grove/bin/cx')
+  if vim.fn.executable(cx_path) == 1 then
+    local result = vim.fn.systemlist(cx_path .. ' rules print-path')
+    if vim.v.shell_error == 0 and result[1] and result[1] ~= '' then
+      local rules_path = vim.fn.trim(result[1])
       vim.cmd('edit ' .. vim.fn.fnameescape(rules_path))
-      vim.api.nvim_echo({{'Grove: Editing active rules: ' .. active_rules_source, 'Normal'}}, false, {})
+      vim.api.nvim_echo({{'Grove: Editing rules: ' .. rules_path, 'Normal'}}, false, {})
       return
     end
   end
 
-  -- Otherwise, find .grove/rules by walking up from the working directory
+  -- Fallback: walk up directories looking for .grove/rules
+  local current_dir = vim.fn.getcwd()
   local max_depth = 10
   local depth = 0
 
@@ -666,23 +627,19 @@ function M.edit_context_rules()
       return
     end
 
-    -- Go up one directory
     local parent = vim.fn.fnamemodify(current_dir, ':h')
     if parent == current_dir then
-      -- Reached root
       break
     end
     current_dir = parent
     depth = depth + 1
   end
 
-  -- .grove/rules not found, run cx edit
-  local cx_path = vim.fn.expand('~/.grove/bin/cx')
   if vim.fn.executable(cx_path) == 1 then
     vim.cmd('terminal ' .. cx_path .. ' edit')
     vim.api.nvim_echo({{'Grove: Running cx edit', 'Normal'}}, false, {})
   else
-    vim.api.nvim_echo({{'Grove: .grove/rules not found and cx not available', 'ErrorMsg'}}, false, {})
+    vim.api.nvim_echo({{'Grove: rules not found and cx not available', 'ErrorMsg'}}, false, {})
   end
 end
 

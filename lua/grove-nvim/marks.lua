@@ -55,7 +55,17 @@ end
 local function get_active_rules_path()
 	local cwd = vim.fn.getcwd()
 
-	-- Search for .grove/state file walking up from cwd
+	-- Use cx rules print-path to resolve the active rules file
+	-- This handles notebook paths, state, and legacy fallback
+	local cx_path = vim.fn.expand('~/.grove/bin/cx')
+	if vim.fn.executable(cx_path) == 1 then
+		local result = vim.fn.systemlist(cx_path .. ' rules print-path')
+		if vim.v.shell_error == 0 and result[1] and result[1] ~= '' then
+			return vim.fn.trim(result[1])
+		end
+	end
+
+	-- Fallback: search for .grove/state file walking up from cwd
 	local search_dir = cwd
 	local state_file = nil
 	local project_root = nil
