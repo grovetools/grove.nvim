@@ -1,9 +1,0 @@
-**/*.go
-**/*.lua
-**/*.vim
-main.go
-Makefile
-go.mod
-grove.yml
-!tests/**
-!**/*_test.go
