@@ -609,7 +609,7 @@ function M.edit_context_rules()
     if vim.v.shell_error == 0 and result[1] and result[1] ~= '' then
       local rules_path = vim.fn.trim(result[1])
       vim.cmd('edit ' .. vim.fn.fnameescape(rules_path))
-      vim.api.nvim_echo({{'Grove: Editing rules: ' .. rules_path, 'Normal'}}, false, {})
+      -- Silently open — the buffer name in the statusline is sufficient
       return
     end
   end
