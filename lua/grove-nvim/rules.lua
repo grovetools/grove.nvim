@@ -193,6 +193,8 @@ function M.preview_rule_files()
     and not rule_to_resolve:match('^@alias:')
     and not rule_to_resolve:match('^@view:')
     and not rule_to_resolve:match('^@v:')
+    and not rule_to_resolve:match('^@changed:')
+    and not rule_to_resolve:match('^@diff:')
 
   -- Build the resolve command with context only for floating patterns
   local resolve_cmd = { cx_path, 'resolve' }

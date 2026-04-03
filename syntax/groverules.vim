@@ -96,6 +96,9 @@ syntax match groveRulesAliasDirective "^\s*@\(alias\|a\):" contained
 " View directive keyword (@view: or @v:)
 syntax match groveRulesViewDirective "^\s*@\(view\|v\):" contained
 
+" Tree directive keyword (@tree:)
+syntax match groveRulesTreeDirective "^\s*@tree:" contained
+
 " Alias directive within a @view: line
 syntax match groveRulesViewAliasDirective "@\(alias\|a\):" contained
 
@@ -113,21 +116,48 @@ syntax match groveRulesViewAlias2Comp2 "\(@view:\s*@\(alias\|a\):[^/:]\+:\)\@<=[
 " Full view line with alias
 syntax match groveRulesViewLine "^\s*@\(view\|v\):\s\+@\(alias\|a\):\S\+.*$" contains=groveRulesViewDirective,groveRulesViewAliasDirective,groveRulesViewRulesetComp1,groveRulesViewRulesetComp2,groveRulesViewRulesetDelim,groveRulesViewRulesetName,groveRulesViewAlias2Comp1,groveRulesViewAlias2Comp2,groveRulesInlineSearch
 
+" Tree line with alias (e.g., @tree: @a:project)
+syntax match groveRulesTreeAliasDirective "@\(alias\|a\):" contained
+syntax match groveRulesTreeAlias2Comp1 "\(@tree:\s*@\(alias\|a\):\)\@<=[^/:]\+\ze:" contained
+syntax match groveRulesTreeAlias2Comp2 "\(@tree:\s*@\(alias\|a\):[^/:]\+:\)\@<=[^/:]\+\ze\(\s\|$\)" contained
+syntax match groveRulesTreeLineAlias "^\s*@tree:\s\+@\(alias\|a\):\S\+.*$" contains=groveRulesTreeDirective,groveRulesTreeAliasDirective,groveRulesTreeAlias2Comp1,groveRulesTreeAlias2Comp2
+
+" Tree line with plain path (e.g., @tree: src/)
+syntax match groveRulesTreeLine "^\s*@tree:\s\+[^@]\S*.*$" contains=groveRulesTreeDirective
+
+" Include directive (@include:) - composite rulesets
+syntax match groveRulesIncludeDirective "@include:" contained
+syntax match groveRulesStandaloneInclude "^\s*@include:.*" contains=groveRulesIncludeDirective,groveRulesFindDirective,groveRulesGrepIDirective,groveRulesGrepDirective,groveRulesSearchQuery
+
 " Command directive (@cmd:)
 syntax match groveRulesCmdDirective "^\s*@cmd:"
 
-" Search directives (@find:, @grep:) - both standalone and inline
+" Search directives (@find:, @grep:, @grep-i:) - both standalone and inline
 syntax match groveRulesFindDirective "@find:" contained
+syntax match groveRulesGrepIDirective "@grep-i:" contained
 syntax match groveRulesGrepDirective "@grep:" contained
+
+" Git-aware directives (@changed:, @diff:)
+syntax match groveRulesChangedDirective "@changed:" contained
+syntax match groveRulesDiffDirective "@diff:" contained
 
 " Search query (quoted string after @find: or @grep:)
 syntax region groveRulesSearchQuery start=+"+ end=+"+ contained
 
-" Inline search directive pattern (pattern @find: "query" or pattern @grep: "query")
-syntax match groveRulesInlineSearch "\s@\(find\|grep\):.*" contains=groveRulesFindDirective,groveRulesGrepDirective,groveRulesSearchQuery
+" Inline search directive pattern (pattern @find: "query", pattern @grep: "query", or pattern @grep-i: "query")
+syntax match groveRulesInlineSearch "\s@\(find\|grep-i\|grep\):.*" contains=groveRulesFindDirective,groveRulesGrepIDirective,groveRulesGrepDirective,groveRulesSearchQuery
 
-" Standalone search directive (line starting with @find: or @grep:)
-syntax match groveRulesStandaloneSearch "^\s*@\(find\|grep\):.*" contains=groveRulesFindDirective,groveRulesGrepDirective,groveRulesSearchQuery
+" Inline @changed: filter (pattern @changed: ref)
+syntax match groveRulesInlineChanged "\s@changed:.*" contains=groveRulesChangedDirective
+
+" Standalone search directive (line starting with @find:, @grep:, or @grep-i:)
+syntax match groveRulesStandaloneSearch "^\s*@\(find\|grep-i\|grep\):.*" contains=groveRulesFindDirective,groveRulesGrepIDirective,groveRulesGrepDirective,groveRulesSearchQuery
+
+" Standalone @changed: directive (line starting with @changed:)
+syntax match groveRulesStandaloneChanged "^\s*@changed:.*" contains=groveRulesChangedDirective
+
+" Standalone @diff: directive (line starting with @diff:)
+syntax match groveRulesStandaloneDiff "^\s*@diff:.*" contains=groveRulesDiffDirective
 
 " Other directives (@default, etc.)
 syntax match groveRulesDirective    "^\s*@\(default\|freeze-cache\|no-expire\|disable-cache\|expire-time\)\(:\)\?"
@@ -187,13 +217,29 @@ highlight default link groveRulesViewRulesetDelim   Operator
 highlight default link groveRulesViewRulesetName    String
 highlight default link groveRulesViewAlias2Comp1    Type
 highlight default link groveRulesViewAlias2Comp2    Constant
+" Tree directive highlighting
+highlight default link groveRulesTreeDirective Keyword
+highlight default link groveRulesTreeAliasDirective Keyword
+highlight default link groveRulesTreeAlias2Comp1    Type
+highlight default link groveRulesTreeAlias2Comp2    Constant
+highlight default link groveRulesTreeLine Normal
+highlight default link groveRulesTreeLineAlias Normal
+
+highlight default link groveRulesIncludeDirective Keyword
+highlight default link groveRulesStandaloneInclude Normal
 highlight default link groveRulesCmdDirective Keyword
 highlight default link groveRulesDirective    Keyword
 highlight default link groveRulesFindDirective PreProc
 highlight default link groveRulesGrepDirective PreProc
+highlight default link groveRulesGrepIDirective PreProc
+highlight default link groveRulesChangedDirective PreProc
+highlight default link groveRulesDiffDirective PreProc
 highlight default link groveRulesSearchQuery  String
 highlight default link groveRulesInlineSearch Normal
+highlight default link groveRulesInlineChanged Normal
 highlight default link groveRulesStandaloneSearch Normal
+highlight default link groveRulesStandaloneChanged Normal
+highlight default link groveRulesStandaloneDiff Normal
 
 " --- Finalization ---
 
