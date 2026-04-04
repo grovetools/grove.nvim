@@ -258,7 +258,7 @@ func newResolveAliasesCmd() *cobra.Command {
 					// Use the node's canonical identifier, replacing underscores with colons
 					// to create a resolvable, namespaced alias.
 					// e.g., "my-ecosystem_feature_sub-project" -> "my-ecosystem:feature:sub-project"
-					aliasPart := strings.ReplaceAll(node.Identifier(), "_", ":")
+					aliasPart := node.Identifier(":")
 
 					alias := fmt.Sprintf("@a:%s/%s", aliasPart, filepath.ToSlash(relativePath))
 					results[path] = alias
