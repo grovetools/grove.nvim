@@ -1,6 +1,6 @@
 # Binaries
 bin/
-grove-nvim
+/grove-nvim
 
 # Go
 *.exe
