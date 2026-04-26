@@ -342,6 +342,18 @@ local function update(bufnr)
 									.. " included by "
 									.. table.concat(line_refs, ", ")
 								table.insert(virt_text, { filtered_text, "GroveVirtualTextFiltered" })
+							elseif stat.excludedByLine and #stat.excludedByLine > 0 then
+								local total_excluded = 0
+								local line_refs = {}
+								for _, excl_group in ipairs(stat.excludedByLine) do
+									total_excluded = total_excluded + excl_group.count
+									table.insert(line_refs, "line " .. excl_group.lineNumber)
+								end
+								local excluded_text = " "
+									.. total_excluded
+									.. " excluded by "
+									.. table.concat(line_refs, ", ")
+								table.insert(virt_text, { excluded_text, "GroveVirtualTextFiltered" })
 							else
 								table.insert(virt_text, { " ⚠ no matches", "GroveVirtualTextNoMatch" })
 							end
