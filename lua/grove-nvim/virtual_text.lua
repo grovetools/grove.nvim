@@ -354,6 +354,12 @@ local function update(bufnr)
 									.. " excluded by "
 									.. table.concat(line_refs, ", ")
 								table.insert(virt_text, { excluded_text, "GroveVirtualTextFiltered" })
+							elseif stat.severity == "Error" then
+								table.insert(virt_text, { " ✖ Error", "GroveVirtualTextNoMatch" })
+							elseif stat.severity == "Warning" then
+								table.insert(virt_text, { " ⚠ Warning", "GroveVirtualTextSkipped" })
+							elseif stat.severity == "Notice" then
+								table.insert(virt_text, { " ℹ Notice", "GroveVirtualTextSkipped" })
 							else
 								table.insert(virt_text, { " ⚠ no matches", "GroveVirtualTextNoMatch" })
 							end
