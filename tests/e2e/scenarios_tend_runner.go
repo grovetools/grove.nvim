@@ -616,6 +616,6 @@ func verifyUnderscoredNameCommandOutput() harness.Step {
 
 func setupDefaultNvimConfig(ctx *harness.Context) string {
 	nvimConfigDir := filepath.Join(ctx.RootDir, "nvim_config")
-	fs.CreateDir(nvimConfigDir)
+	_ = fs.CreateDir(nvimConfigDir)
 	return nvimConfigDir
 }

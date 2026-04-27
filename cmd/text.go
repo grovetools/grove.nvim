@@ -45,11 +45,11 @@ func newTextSelectCmd() *cobra.Command {
 			codeBlock := string(stdin)
 
 			// Open the target file for appending
-			f, err := os.OpenFile(targetFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			f, err := os.OpenFile(targetFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) //nolint:gosec // user-specified target file
 			if err != nil {
 				return fmt.Errorf("failed to open target file %s: %w", targetFile, err)
 			}
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 
 			// Write the formatted code block
 			// Use two newlines to ensure separation from previous content
@@ -58,7 +58,7 @@ func newTextSelectCmd() *cobra.Command {
 				return fmt.Errorf("failed to write to target file: %w", err)
 			}
 
-	textUlog.Success("Appended selection to file").
+			textUlog.Success("Appended selection to file").
 				Field("target_file", targetFile).
 				Field("language", language).
 				Emit()
@@ -99,11 +99,11 @@ func newTextAskCmd() *cobra.Command {
 			}
 
 			// Open the target file for appending
-			f, err := os.OpenFile(targetFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+			f, err := os.OpenFile(targetFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600) //nolint:gosec // user-specified target file
 			if err != nil {
 				return fmt.Errorf("failed to open target file %s: %w", targetFile, err)
 			}
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 
 			// Append the question
 			// Use two newlines to ensure separation
@@ -112,7 +112,7 @@ func newTextAskCmd() *cobra.Command {
 				return fmt.Errorf("failed to write question to target file: %w", err)
 			}
 
-	textUlog.Success("Appended question to file").
+			textUlog.Success("Appended question to file").
 				Field("target_file", targetFile).
 				Emit()
 

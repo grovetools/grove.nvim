@@ -40,7 +40,7 @@ func TestTextSelectCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify the file content
-	content, err := os.ReadFile(targetFile)
+	content, err := os.ReadFile(targetFile) //nolint:gosec // test reads from t.TempDir
 	require.NoError(t, err)
 
 	expectedContent := "```go\n" + snippet + "\n```"
@@ -53,9 +53,8 @@ func TestTextAskCmd(t *testing.T) {
 	targetFile := filepath.Join(tempDir, "test.md")
 	// Pre-populate the file
 	initialContent := "# My Chat\n"
-	err := os.WriteFile(targetFile, []byte(initialContent), 0644)
+	err := os.WriteFile(targetFile, []byte(initialContent), 0o600)
 	require.NoError(t, err)
-
 
 	question := "What does this function do?"
 
@@ -70,7 +69,7 @@ func TestTextAskCmd(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify the file content
-	content, err := os.ReadFile(targetFile)
+	content, err := os.ReadFile(targetFile) //nolint:gosec // test reads from t.TempDir
 	require.NoError(t, err)
 
 	expectedContent := initialContent + "\n\n" + question + "\n"
@@ -98,7 +97,7 @@ func TestTextAskCmd_Stdin(t *testing.T) {
 	err := rootCmd.Execute()
 	require.NoError(t, err)
 
-	content, err := os.ReadFile(targetFile)
+	content, err := os.ReadFile(targetFile) //nolint:gosec // test reads from t.TempDir
 	require.NoError(t, err)
 	assert.Contains(t, string(content), question)
 }

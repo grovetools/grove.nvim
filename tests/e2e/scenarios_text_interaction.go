@@ -94,7 +94,7 @@ let g:grove_mock_bin_dir = '%s'
 		}
 
 		// Update PATH to include mock bin
-		os.Setenv("PATH", mockBinDir+":"+os.Getenv("PATH"))
+		_ = os.Setenv("PATH", mockBinDir+":"+os.Getenv("PATH"))
 
 		return nil
 	})
@@ -131,7 +131,7 @@ func testTextSelectionHappyPath() harness.Step {
 		}
 
 		// Read and verify the chat file
-		content, err := os.ReadFile(chatMdPath)
+		content, err := os.ReadFile(chatMdPath) //nolint:gosec // test reads from temp dir
 		if err != nil {
 			return fmt.Errorf("failed to read chat file: %w", err)
 		}
@@ -165,12 +165,12 @@ func testTextSelectionNoTargetFile() harness.Step {
 			"text", "select", "--lang", "go")
 		selectCmd.Stdin(strings.NewReader("some code"))
 		selectResult := selectCmd.Run()
-		
+
 		// Should fail due to missing --file flag
 		if selectResult.ExitCode == 0 {
 			return fmt.Errorf("expected command to fail without --file flag, but it succeeded")
 		}
-		
+
 		if !strings.Contains(selectResult.Stderr, "required flag(s) \"file\" not set") {
 			return fmt.Errorf("expected error about missing file flag, got: %s", selectResult.Stderr)
 		}

@@ -259,7 +259,7 @@ func verifyFloatingWindowAppears() harness.Step {
 		// Check for expected content in the floating window
 		// Note: ANSI codes make exact matching hard, so we check for key indicators
 		expectedTexts := []string{
-			"Grove Output",          // The floating window title
+			"Grove Output",           // The floating window title
 			"tend run",               // Part of the command
 			"Press any key to close", // The prompt to close
 		}
@@ -345,8 +345,8 @@ func containsAll(content string, expectedTexts []string) bool {
 func containsText(content, text string) bool {
 	return len(content) > 0 && len(text) > 0 &&
 		(content == text ||
-		 len(content) >= len(text) &&
-		 findSubstring(content, text))
+			len(content) >= len(text) &&
+				findSubstring(content, text))
 }
 
 // Simple substring search

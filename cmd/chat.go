@@ -84,7 +84,7 @@ func newChatCmd() *cobra.Command {
 // The daemon handles execution in the background — this returns immediately.
 func submitViaDaemon(ctx context.Context, filePath string) error {
 	client := daemon.New()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	if !client.IsRunning() {
 		return fmt.Errorf("daemon is not running")

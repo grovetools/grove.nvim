@@ -103,7 +103,7 @@ func newStreamStateCmd() *cobra.Command {
 			}
 
 			client := daemon.NewWithAutoStart()
-			defer client.Close()
+			defer func() { _ = client.Close() }()
 
 			if !client.IsRunning() {
 				return fmt.Errorf("daemon is not running")
@@ -164,7 +164,7 @@ func newResolveAliasesCmd() *cobra.Command {
 			// --- Start Notebook Alias Generation Logic ---
 			coreCfg, err := config.LoadDefault()
 			if err != nil {
-	ulog.Warn("Could not load grove config for notebook aliases").
+				ulog.Warn("Could not load grove config for notebook aliases").
 					Err(err).
 					Emit()
 			}

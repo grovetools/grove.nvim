@@ -95,7 +95,7 @@ func testRealBinaryHappyPath() harness.Step {
 		}
 
 		// 3. Verify the file contents
-		content, err := os.ReadFile(chatMdPath)
+		content, err := os.ReadFile(chatMdPath) //nolint:gosec // test reads from temp dir
 		if err != nil {
 			return fmt.Errorf("failed to read chat file: %w", err)
 		}
@@ -128,11 +128,11 @@ func testRealBinaryErrorHandling() harness.Step {
 		selectCmd := command.New(groveNvimBinary, "text", "select", "--lang", "go")
 		selectCmd.Stdin(strings.NewReader("some code"))
 		selectResult := selectCmd.Run()
-		
+
 		if selectResult.ExitCode == 0 {
 			return fmt.Errorf("expected command to fail without --file flag, but it succeeded")
 		}
-		
+
 		if !strings.Contains(selectResult.Stderr, "required flag(s) \"file\" not set") {
 			return fmt.Errorf("expected error about missing file flag, got: %s", selectResult.Stderr)
 		}

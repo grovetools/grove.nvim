@@ -54,7 +54,7 @@ exit 0
 		if err := fs.WriteString(filepath.Join(mockBinDir, "flow"), mockFlowScript); err != nil {
 			return err
 		}
-		if err := os.Chmod(filepath.Join(mockBinDir, "flow"), 0755); err != nil {
+		if err := os.Chmod(filepath.Join(mockBinDir, "flow"), 0o755); err != nil { //nolint:gosec // executable needs 0755
 			return err
 		}
 		// Mock grove - this is what grove-nvim actually calls
@@ -71,7 +71,7 @@ exit 0
 		if err := fs.WriteString(filepath.Join(mockBinDir, "grove"), mockGroveScript); err != nil {
 			return err
 		}
-		if err := os.Chmod(filepath.Join(mockBinDir, "grove"), 0755); err != nil {
+		if err := os.Chmod(filepath.Join(mockBinDir, "grove"), 0o755); err != nil { //nolint:gosec // executable needs 0755
 			return err
 		}
 
@@ -153,7 +153,7 @@ exit $exit_code
 		if err := fs.WriteString(filepath.Join(groveBinDir, "grove-nvim"), groveNvimWrapper); err != nil {
 			return err
 		}
-		if err := os.Chmod(filepath.Join(groveBinDir, "grove-nvim"), 0755); err != nil {
+		if err := os.Chmod(filepath.Join(groveBinDir, "grove-nvim"), 0o755); err != nil { //nolint:gosec // executable needs 0755
 			return err
 		}
 
@@ -178,7 +178,7 @@ func runGroveChatRunCommand() harness.Step {
 
 		// Create the command to run Neovim headlessly
 		// Use -u to specify our init.lua instead of --clean which ignores all configs
-		cmd := command.New("nvim", 
+		cmd := command.New("nvim",
 			"--headless",
 			"-u", filepath.Join(ctx.GetString("nvim_config_dir"), "init.lua"),
 			"-c", fmt.Sprintf("edit %s", notePath),
