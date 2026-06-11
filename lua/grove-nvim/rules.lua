@@ -4,6 +4,39 @@
 local M = {}
 local utils = require('grove-nvim.utils')
 
+-- Returns the base directory under which XDG-located grove worktrees live
+-- (<dataHome>/grove/worktrees). Mirrors core paths.getDataHome() precedence:
+-- GROVE_HOME wins, then XDG_DATA_HOME, then the ~/.local/share fallback.
+local function xdg_worktrees_base()
+  local grove_home = os.getenv("GROVE_HOME")
+  if grove_home and grove_home ~= "" then
+    return grove_home .. "/data/grove/worktrees"
+  end
+  local xdg_data_home = os.getenv("XDG_DATA_HOME")
+  if xdg_data_home and xdg_data_home ~= "" then
+    return xdg_data_home .. "/grove/worktrees"
+  end
+  local home = os.getenv("HOME")
+  if home and home ~= "" then
+    return home .. "/.local/share/grove/worktrees"
+  end
+  return nil
+end
+
+-- True when cwd is inside a grove worktree, covering both layouts:
+-- the legacy in-repo `.grove-worktrees/` and the XDG sibling-workspace base
+-- (<dataHome>/grove/worktrees).
+local function in_worktree_context(cwd)
+  if cwd:match("%.grove%-worktrees") then
+    return true
+  end
+  local base = xdg_worktrees_base()
+  if base and cwd:find(base, 1, true) == 1 then
+    return true
+  end
+  return false
+end
+
 -- Parse an alias from a rule line
 -- Returns: alias_part (e.g., "@a:grove-nvim" or "@a:grove-nvim::default"), base_path (the resolved absolute path)
 local function parse_alias_from_line(line, cx_path)
@@ -58,8 +91,8 @@ local function parse_alias_from_line(line, cx_path)
 
     for _, ws in ipairs(workspaces) do
       if ws.name == name and not ws.is_worktree then
-        -- Check if we're in a worktree context
-        local in_worktree = cwd:match("%.grove%-worktrees")
+        -- Check if we're in a worktree context (legacy in-repo or XDG base)
+        local in_worktree = in_worktree_context(cwd)
 
         if in_worktree and ws.worktree_name then
           -- Prefer siblings in same worktree
