@@ -58,3 +58,12 @@ See the [documentation](docs/) for detailed usage instructions:
 - [Examples](docs/03-examples.md)
 
 <!-- DOCGEN:TOC:END -->
+
+## Attribution
+
+The theme engine under `lua/grove-nvim/theme/` (highlight-group mapping,
+color utilities, apply loop) is ported from
+[floraverse.nvim](https://github.com/mattsolo1/floraverse.nvim) (MIT), by the
+same author. Palettes are not defined here — they are served from grove
+core's theme registry (see `core/tui/theme/THIRD_PARTY_LICENSES.md` for
+upstream palette attributions).
