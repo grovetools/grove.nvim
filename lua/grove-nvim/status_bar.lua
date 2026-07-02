@@ -217,20 +217,10 @@ local function do_refresh()
   -- Clear previous highlights
   vim.api.nvim_buf_clear_namespace(state.buf, 0, 0, -1)
 
-  -- Define italic label highlight and non-italic override
-  vim.cmd("highlight default GroveStatusLabel guifg=#5c6370 gui=italic ctermfg=243 cterm=italic") -- Muted grey italic
-  vim.cmd("highlight default GroveStatusContent gui=NONE cterm=NONE")
-  vim.cmd("highlight default GroveStatusSeparator guifg=#3b4048 ctermfg=237") -- Dark grey separator
-  vim.cmd("highlight default GroveStatusMuted guifg=#5c6370 gui=italic ctermfg=243 cterm=italic") -- Muted grey italic for (worktree) etc
-
-  -- Define highlights for git status parts
-  vim.cmd("highlight default GroveStatusGitAhead guifg=#61afef") -- Blue/Info
-  vim.cmd("highlight default GroveStatusGitBehind guifg=#e06c75") -- Red/Error
-  vim.cmd("highlight default GroveStatusGitModified guifg=#d19a66") -- Orange/Warn
-  vim.cmd("highlight default GroveStatusGitStaged guifg=#61afef") -- Blue/Info
-  vim.cmd("highlight default GroveStatusGitUntracked guifg=#e06c75") -- Red/Error
-  vim.cmd("highlight default GroveStatusGitAdded guifg=#98c379") -- Green/Add
-  vim.cmd("highlight default GroveStatusGitDeleted guifg=#e06c75") -- Red/Delete
+  -- Define the GroveStatus* highlight groups (labels, separators, git
+  -- parts) from the synced grove palette, falling back to the historic
+  -- hardcoded hex values when theming is disabled/unavailable.
+  require("grove-nvim.theme").apply_ui_highlights()
 
   -- Pre-compute workspace-derived data for highlights
   local ws = provider.get_current_workspace()
@@ -395,8 +385,10 @@ function M.show()
     zindex = 50,
   })
 
-  -- Set border to dark grey
-  vim.cmd("highlight default GroveStatusBarBorder guifg=#3b4048 ctermfg=237")
+  -- Border color comes from the synced grove palette (GroveStatusBarBorder
+  -- is defined by theme.apply_ui_highlights, with the old dark grey as
+  -- fallback).
+  require("grove-nvim.theme").apply_ui_highlights()
   vim.wo[state.win].winhighlight = "Normal:StatusLine,FloatBorder:GroveStatusBarBorder"
 
   -- Handle window resizing
@@ -408,9 +400,9 @@ function M.show()
     end,
   })
 
-  -- Listen for status updates
+  -- Listen for status updates and live theme changes
   vim.api.nvim_create_autocmd("User", {
-    pattern = "GroveStatusUpdated",
+    pattern = { "GroveStatusUpdated", "GroveThemeChanged" },
     callback = M.refresh,
   })
 

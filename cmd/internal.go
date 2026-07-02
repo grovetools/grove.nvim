@@ -82,6 +82,7 @@ func newInternalCmd() *cobra.Command {
 	cmd.AddCommand(newResolveAliasesCmd())
 	cmd.AddCommand(newGitStatusCmd())
 	cmd.AddCommand(newStreamStateCmd())
+	cmd.AddCommand(newThemeCmd())
 	return cmd
 }
 
@@ -124,7 +125,10 @@ func newStreamStateCmd() *cobra.Command {
 							filtered = append(filtered, ws)
 						}
 					}
-					if len(filtered) == 0 {
+					// Updates that carry a theme (the "initial" snapshot) must
+					// pass through even when no workspace is relevant, so a
+					// theme change during a disconnect isn't lost.
+					if len(filtered) == 0 && update.Theme == nil {
 						continue // Had workspaces but none relevant — skip
 					}
 					update.Workspaces = filtered

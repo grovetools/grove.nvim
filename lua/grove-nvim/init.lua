@@ -71,6 +71,31 @@ function M.setup(opts)
   config.setup(opts)
   setup_highlights()
 
+  -- Apply the grove theme engine (opt-in via ui.theme.enable): initial
+  -- synchronous `grove-nvim internal theme` fetch + live-update autocmds.
+  require("grove-nvim.theme").setup()
+
+  -- Keep grove.nvim's shared UI highlight groups in sync with live theme
+  -- changes even when the full engine is disabled.
+  local hl_group = vim.api.nvim_create_augroup("GroveNvimHighlights", { clear = true })
+  vim.api.nvim_create_autocmd("User", {
+    group = hl_group,
+    pattern = "GroveThemeChanged",
+    callback = function()
+      require("grove-nvim.theme").apply_ui_highlights()
+    end,
+  })
+
+  -- Re-derive the GroveCtxTokens* highlights whenever the colorscheme
+  -- changes (including grove theme engine re-applies).
+  vim.api.nvim_create_autocmd("ColorScheme", {
+    group = hl_group,
+    callback = function()
+      highlights_defined = false
+      setup_highlights()
+    end,
+  })
+
   -- Start the data fetching timers
   provider.start()
 
@@ -658,9 +683,10 @@ end
 --- Get lualine component for git changes
 --- @return table Lualine component configuration
 function M.git_changes_component()
-  -- Define custom highlights for git changes (foreground only, no background)
-  vim.cmd("highlight default GroveGitAdded guifg=#98c379 ctermfg=green")
-  vim.cmd("highlight default GroveGitDeleted guifg=#e06c75 ctermfg=red")
+  -- Define custom highlights for git changes (foreground only, no
+  -- background), sourced from the synced grove palette with the historic
+  -- hex values as fallback.
+  require("grove-nvim.theme").apply_ui_highlights()
 
   return {
     function()

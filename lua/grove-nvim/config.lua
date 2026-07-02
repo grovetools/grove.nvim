@@ -11,6 +11,32 @@ M.options = {
     chat_placeholder = {
       enable = true,      -- Show "Start typing here..." placeholder in empty chat turns
     },
+    -- Grove theme engine: applies the grove-synced palette as a Neovim
+    -- colorscheme and keeps it in sync with live theme changes from the
+    -- daemon (theme_changed events). GROVE_THEME pins the theme and
+    -- disables live updates for this process.
+    theme = {
+      enable = false,          -- Opt-in.
+      live_updates = true,     -- Re-apply when the daemon broadcasts a theme change.
+      transparent = false,     -- Don't paint the main background.
+      terminal_colors = true,  -- Set vim.g.terminal_color_* from the palette.
+      styles = {
+        comments = { italic = true },
+        keywords = { italic = true },
+        functions = {},
+        variables = {},
+        sidebars = "dark",     -- "dark", "transparent" or "normal"
+        floats = "dark",       -- "dark", "transparent" or "normal"
+      },
+      plugins = {
+        -- base + treesitter highlight sets always apply. Plugin sets:
+        all = false,           -- Enable every supported plugin set.
+        auto = true,           -- Auto-detect installed plugins via lazy.nvim.
+        -- Per-set overrides, e.g.: telescope = true, ["neo-tree"] = false.
+        -- Supported: gitsigns, neo-tree, blink, cmp, snacks, hop, trouble,
+        -- telescope, which-key.
+      },
+    },
     -- Lualine component display options (when status_bar.enable = false)
     lualine = {
       plan = {

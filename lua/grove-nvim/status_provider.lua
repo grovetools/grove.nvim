@@ -5,6 +5,7 @@ M.state = {
   jobs = {},        -- Map of job_id -> JobInfo
   context_size = nil,
   rules_file = nil,
+  theme = nil,      -- Last theme payload {name, family, mode, dark?, light?}
 }
 
 local stream_job_id = nil
@@ -42,6 +43,12 @@ M.job_type_icons = job_type_icons
 local function notify_update()
   vim.schedule(function()
     vim.api.nvim_exec_autocmds("User", { pattern = "GroveStatusUpdated", modeline = false })
+  end)
+end
+
+local function notify_theme_update()
+  vim.schedule(function()
+    vim.api.nvim_exec_autocmds("User", { pattern = "GroveThemeChanged", modeline = false })
   end)
 end
 
@@ -244,6 +251,20 @@ function M._process_line(line)
       end
     end
     notify_update()
+  end
+
+  -- Theme sync: dedicated theme_changed events carry the payload; the
+  -- initial snapshot stamps the current theme (reconnect catch-up so a
+  -- theme change during a disconnect isn't lost).
+  local theme_payload = nil
+  if update.update_type == "theme_changed" then
+    theme_payload = update.payload
+  elseif update.update_type == "initial" then
+    theme_payload = update.theme
+  end
+  if type(theme_payload) == "table" and theme_payload.name and theme_payload.name ~= "" then
+    M.state.theme = theme_payload
+    notify_theme_update()
   end
 
   -- Job lifecycle events — track state and reload buffer on completion

@@ -23,7 +23,7 @@ LDFLAGS = -ldflags="\
 -X '$(VERSION_PKG).Branch=$(GIT_BRANCH)' \
 -X '$(VERSION_PKG).BuildDate=$(BUILD_DATE)'"
 
-.PHONY: all build test clean fmt vet lint run check dev build-all help
+.PHONY: all build test test-lua clean fmt vet lint run check dev build-all help
 
 all: build
 
@@ -35,6 +35,11 @@ build:
 test:
 	@echo "Running tests..."
 	@go test -v ./...
+
+# Headless Neovim smoke test for the Lua theme engine.
+test-lua:
+	@echo "Running Lua smoke tests..."
+	@env -u GROVE_THEME nvim --headless -u NONE -l tests/lua/theme_smoke.lua
 
 clean:
 	@echo "Cleaning..."
