@@ -121,6 +121,15 @@ end, {
 	desc = "Open Gmux Key Manage TUI (gmux km).",
 })
 
+-- Bust the session-cached skill list used by the `/skill` completion source.
+vim.api.nvim_create_user_command("GroveSkillsRefresh", function()
+	require("grove-nvim.data")._skills_cache = nil
+	vim.notify("Grove: skill completion cache cleared.", vim.log.levels.INFO)
+end, {
+	nargs = 0,
+	desc = "Clear the cached skill list used by /skill autocomplete.",
+})
+
 -- Context Commands
 vim.api.nvim_create_user_command("GroveEditContext", function()
 	require("grove-nvim").edit_context_rules()

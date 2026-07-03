@@ -51,6 +51,63 @@ function M.get_templates(callback)
   end)
 end
 
+-- Get available ecosystem skills.
+-- The skill set is stable per nvim session, so the decoded list is cached in
+-- M._skills_cache and short-circuited on subsequent calls. To bust the cache
+-- without restarting nvim, run :GroveSkillsRefresh (registered in the plugin)
+-- or `:lua require('grove-nvim.data')._skills_cache = nil`.
+M._skills_cache = nil
+function M.get_skills(callback)
+  if M._skills_cache then
+    callback(M._skills_cache)
+    return
+  end
+
+  -- `skills` is grove-managed and may not be on $PATH, so prefer the grove bin
+  -- directory and fall back to exepath for bare-nvim launches.
+  local skills_path = utils.get_grove_bin_dir() .. '/skills'
+  if vim.fn.filereadable(skills_path) == 0 then
+    skills_path = vim.fn.exepath('skills')
+  end
+  if skills_path == '' then
+    callback({})
+    return
+  end
+
+  utils.run_command({ skills_path, 'list', '--json' }, function(stdout, stderr, exit_code)
+    if exit_code ~= 0 or stdout == "" then
+      callback({})
+      return
+    end
+
+    local list = {}
+    local ok, arr = pcall(vim.json.decode, stdout)
+    if ok and type(arr) == 'table' then
+      for _, s in ipairs(arr) do
+        if s.name then
+          table.insert(list, { name = s.name, source = s.source, configured = s.configured })
+        end
+      end
+    else
+      -- Fallback: parse the tabwriter table. The legacy (non-workspace) header
+      -- is `SKILL  SOURCE`; the workspace header is `SKILL  CONFIGURED  SOURCE`.
+      -- In both, column 1 is the skill name, so that parse works either way.
+      local lines = vim.split(stdout, '\n')
+      for i, line in ipairs(lines) do
+        if i > 1 and line:match('%S') then  -- Skip header and empty lines
+          local name = line:match('^(%S+)')
+          if name then
+            table.insert(list, { name = name })
+          end
+        end
+      end
+    end
+
+    M._skills_cache = list
+    callback(list)
+  end)
+end
+
 -- Get available models
 function M.get_models(callback)
   local grove_nvim_path = vim.fn.exepath('grove-nvim')
