@@ -168,6 +168,51 @@ function source:get_completions(ctx, callback)
     return
   end
 
+  -- Case 4: Completing the scalar `skill:` field with ecosystem skill names.
+  if key_context == 'skill' or current_line:match('^skill:%s*$') then
+    data.get_skills(function(skills)
+      local items = {}
+      for _, skill in ipairs(skills) do
+        local name = skill.name
+        if name and name ~= "" then
+          table.insert(items, {
+            label = name,
+            insertText = name,
+            detail = skill.source or "",
+            kind = vim.lsp.protocol.CompletionItemKind.Value,
+          })
+        end
+      end
+      callback({ items = items })
+    end)
+    return
+  end
+
+  -- Case 5: Completing `skill_sequence:` list items with ecosystem skill names.
+  if key_context == 'skill_sequence' then
+    local looks_like_list_item = current_line:match('^%s*-') or
+                                  current_line:match('^%s*$') or
+                                  (current_line:match('^%s+') and not current_line:match('^%s*%w+:'))
+    if looks_like_list_item then
+      data.get_skills(function(skills)
+        local items = {}
+        for _, skill in ipairs(skills) do
+          local name = skill.name
+          if name and name ~= "" then
+            table.insert(items, {
+              label = name,
+              insertText = name,
+              detail = skill.source or "",
+              kind = vim.lsp.protocol.CompletionItemKind.Value,
+            })
+          end
+        end
+        callback({ items = items })
+      end)
+      return
+    end
+  end
+
   -- No applicable completion
   callback({ items = {} })
 end
