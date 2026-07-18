@@ -67,6 +67,14 @@ M.options = {
     -- %s will be replaced with the scenario name under the cursor
     command_template = "tend run --debug-session %s",
   },
+  -- Reload open buffers when their files change on disk (agents, nb sync,
+  -- flow jobs). Terminal nvim inside tuimux/treemux panes rarely receives
+  -- FocusGained, so a repeating checktime timer backs up the autocmds.
+  autoreload = {
+    enable = true,
+    interval_ms = 2000,   -- checktime poll interval
+    notify = true,        -- announce externally reloaded buffers
+  },
 }
 
 ---Merges user options with the default configuration.

@@ -26,6 +26,25 @@ The plugin will be loaded automatically on startup.
 
 The `grove-nvim` plugin is designed to work after installation with no extra setup. It does not have or require a `setup()` function. Once loaded by your plugin manager, all commands and keybindings are available.
 
+### Automatic Buffer Reload
+
+Files edited outside Neovim (agents, `nb` sync, flow jobs) are picked up
+automatically: the plugin enables `'autoread'` and runs `:checktime` on
+`FocusGained`/`BufEnter`/`CursorHold` plus a repeating timer, since terminal
+Neovim inside tuimux/treemux panes rarely receives focus events. Buffers with
+unsaved local changes are never silently overwritten — Neovim's normal
+file-changed warning applies. Configure via `setup()`:
+
+```lua
+require('grove-nvim').setup {
+  autoreload = {
+    enable = true,       -- default
+    interval_ms = 2000,  -- checktime poll interval
+    notify = true,       -- announce externally reloaded buffers
+  },
+}
+```
+
 ### Statusline Integration
 
 The plugin provides a status function to indicate when a background chat job is active. This is used for the `:GroveChatRun silent` command, which runs a job in the background and displays a spinner in the statusline instead of opening a terminal.

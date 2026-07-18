@@ -1,6 +1,9 @@
 -- Initialize the jump file watcher
 require("grove-nvim.watcher")
 
+-- Keep open buffers in sync with external file changes
+require("grove-nvim.autoreload")
+
 -- Expose a setup function for users to call from their config
 _G.grove_nvim = {
 	setup = function(opts)
