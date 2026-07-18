@@ -99,14 +99,16 @@ function M.setup(opts)
   -- Start the data fetching timers
   provider.start()
 
-  -- Set up spatial navigation keymaps (Ctrl+h/j/k/l) for groveterm
-  -- pane traversal. Works as normal wincmd navigation outside groveterm.
-  require("grove-nvim.navigator").setup()
+  -- Set up spatial navigation keymaps (Ctrl+h/j/k/l) for grove terminal
+  -- host pane traversal (groveterm and tuimux/treemux). Works as normal
+  -- wincmd navigation outside a grove host.
+  local navigator = require("grove-nvim.navigator")
+  navigator.setup()
 
-  -- Announce Neovim's server socket to groveterm via OSC 777 so the
-  -- host can reuse this instance for file edits instead of spawning
+  -- Announce Neovim's server socket to the grove terminal host via OSC 777
+  -- so the host can reuse this instance for file edits instead of spawning
   -- a new editor process.
-  if os.getenv("GROVE_TERMINAL") and vim.v.servername and vim.v.servername ~= "" then
+  if navigator.in_grove_host() and vim.v.servername and vim.v.servername ~= "" then
     io.stdout:write("\x1b]777;nvim_socket;" .. vim.v.servername .. "\x1b\\")
     io.stdout:flush()
   end

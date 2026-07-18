@@ -46,10 +46,11 @@ test:
 	@echo "Running tests..."
 	@go test -v ./...
 
-# Headless Neovim smoke test for the Lua theme engine.
+# Headless Neovim smoke tests for the Lua modules (theme engine, navigator).
 test-lua:
 	@echo "Running Lua smoke tests..."
 	@env -u GROVE_THEME nvim --headless -u NONE -l tests/lua/theme_smoke.lua
+	@env -u GROVE_TERMINAL -u TUIMUX_PTY -u GROVE_PTY nvim --headless -u NONE -l tests/lua/navigator_smoke.lua
 
 clean:
 	@echo "Cleaning..."
