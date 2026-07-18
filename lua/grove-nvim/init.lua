@@ -107,10 +107,22 @@ function M.setup(opts)
 
   -- Announce Neovim's server socket to the grove terminal host via OSC 777
   -- so the host can reuse this instance for file edits instead of spawning
-  -- a new editor process.
-  if navigator.in_grove_host() and vim.v.servername and vim.v.servername ~= "" then
-    io.stdout:write("\x1b]777;nvim_socket;" .. vim.v.servername .. "\x1b\\")
-    io.stdout:flush()
+  -- a new editor process. The host also reads this as an authoritative "nvim
+  -- is running here" signal to route ctrl+hjkl into this pane; we clear it on
+  -- exit (empty socket path) so the host restores plain pane navigation.
+  if navigator.in_grove_host() then
+    if vim.v.servername and vim.v.servername ~= "" then
+      io.stdout:write("\x1b]777;nvim_socket;" .. vim.v.servername .. "\x1b\\")
+      io.stdout:flush()
+    end
+    vim.api.nvim_create_autocmd("VimLeavePre", {
+      once = true,
+      callback = function()
+        io.stdout:write("\x1b]777;nvim_socket;\x1b\\")
+        io.stdout:flush()
+      end,
+      desc = "grove: clear nvim pane marker on exit",
+    })
   end
 
   -- Show status bar after UI is ready
