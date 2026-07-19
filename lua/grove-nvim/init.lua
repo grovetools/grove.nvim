@@ -115,6 +115,12 @@ function M.setup(opts)
       io.stdout:write("\x1b]777;nvim_socket;" .. vim.v.servername .. "\x1b\\")
       io.stdout:flush()
     end
+    -- Mirror the current buffer name into the terminal title (OSC 0/2).
+    -- treemux's editor panes capture it into their render state and surface
+    -- it as the live rail label, so the rail tracks the open buffer instead
+    -- of freezing on the spawn-time filename. %t = tail (basename) only.
+    vim.o.title = true
+    vim.o.titlestring = "%t"
     vim.api.nvim_create_autocmd("VimLeavePre", {
       once = true,
       callback = function()
