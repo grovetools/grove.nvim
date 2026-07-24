@@ -216,6 +216,32 @@ function M.setup()
 
   local aug = vim.api.nvim_create_augroup("GroveTheme", { clear = true })
 
+  -- Grove owns the active colorscheme while the engine is enabled. Plugin
+  -- managers commonly load grove.nvim early and apply the user's configured
+  -- colorscheme later in startup, which otherwise silently replaces every
+  -- Grove highlight until the next live theme event. Re-assert asynchronously
+  -- after any external colorscheme application. M.apply emits ColorScheme too,
+  -- so recognize our own colors_name both before and inside the scheduled
+  -- callback to avoid recursion and duplicate queued applies.
+  vim.api.nvim_create_autocmd("ColorScheme", {
+    group = aug,
+    pattern = "*",
+    callback = function()
+      if type(vim.g.colors_name) == "string" and vim.g.colors_name:match("^grove%-") then
+        return
+      end
+      vim.schedule(function()
+        if not opts().enable then
+          return
+        end
+        if type(vim.g.colors_name) == "string" and vim.g.colors_name:match("^grove%-") then
+          return
+        end
+        M.apply(M.current_payload())
+      end)
+    end,
+  })
+
   -- Live updates from the daemon stream (theme_changed events and initial
   -- snapshots stored by status_provider). Skipped while GROVE_THEME pins
   -- the process theme.

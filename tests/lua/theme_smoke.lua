@@ -125,6 +125,19 @@ local fallback = theme.ui_colors()
 ok(fallback.muted == "#5c6370", "ui_colors fallback muted wrong")
 ok(fallback.add == "#98c379", "ui_colors fallback add wrong")
 
+-- 6. A colorscheme loaded after grove.nvim setup cannot permanently replace
+--    an enabled Grove theme (the common plugin-manager startup order).
+theme.fetch = function()
+  return fixture
+end
+theme.setup()
+vim.cmd.colorscheme("default")
+ok(vim.g.colors_name == "default", "external colorscheme should apply before the scheduled repair")
+ok(vim.wait(1000, function()
+  return vim.g.colors_name == "grove-test-light"
+end), "enabled Grove theme was not restored after an external ColorScheme event")
+ok(vim.api.nvim_get_hl(0, { name = "Normal" }).bg == hex("#f2ecbc"), "restored Grove Normal.bg wrong")
+
 if failures > 0 then
   io.stderr:write(("theme_smoke: %d failure(s)\n"):format(failures))
   os.exit(1)
