@@ -68,6 +68,10 @@ end
 
 --- Main setup function for the plugin
 function M.setup(opts)
+  -- Also guard this entry point for configurations that call setup() directly
+  -- without sourcing plugin/grove.lua. This is idempotent.
+  require("grove-nvim.lsp").setup_diff_view_guard()
+
   config.setup(opts)
   setup_highlights()
 

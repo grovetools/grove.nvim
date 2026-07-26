@@ -1,3 +1,7 @@
+-- Install the diff-view LSP guard before initializing any other plugin feature.
+-- Hosts set vim.g.grove_diff_view before plugin init for pinned review editors.
+require("grove-nvim.lsp").setup_diff_view_guard()
+
 -- Initialize the jump file watcher
 require("grove-nvim.watcher")
 

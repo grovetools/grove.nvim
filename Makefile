@@ -51,6 +51,7 @@ test-lua:
 	@echo "Running Lua smoke tests..."
 	@env -u GROVE_THEME nvim --headless -u NONE -l tests/lua/theme_smoke.lua
 	@env -u GROVE_TERMINAL -u TUIMUX_PTY -u GROVE_PTY nvim --headless -u NONE -l tests/lua/navigator_smoke.lua
+	@nvim --headless -u NONE -l tests/lua/diff_view_lsp_smoke.lua
 
 clean:
 	@echo "Cleaning..."

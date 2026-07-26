@@ -45,6 +45,22 @@ require('grove-nvim').setup {
 }
 ```
 
+### Diff-view LSP suppression
+
+Pinned review editors should be launched with this argument before Neovim loads
+the user's configuration or plugins:
+
+```sh
+--cmd "lua vim.g.grove_diff_view = 1"
+```
+
+When that exact global marker is present, grove.nvim prevents
+`vim.lsp.enable`, `vim.lsp.start`, and `vim.lsp.start_client` from starting
+language servers, stops any client that attached before plugin initialization,
+and rejects later attachments. Without the marker, LSP behavior is unchanged.
+The marker is intended to remain set for the lifetime of the dedicated diff
+editor.
+
 ### Statusline Integration
 
 The plugin provides a status function to indicate when a background chat job is active. This is used for the `:GroveChatRun silent` command, which runs a job in the background and displays a spinner in the statusline instead of opening a terminal.

@@ -3,6 +3,83 @@
 
 local M = {}
 
+local suppression_installed = false
+
+--- Return whether this Neovim instance was launched as a Grove diff viewer.
+---
+--- The marker is intentionally global and read during plugin initialization so a
+--- host can set it with: --cmd "lua vim.g.grove_diff_view = 1"
+--- @return boolean
+function M.is_diff_view()
+  return vim.g.grove_diff_view == 1 or vim.g.grove_diff_view == true
+end
+
+--- Prevent language servers from being started in pinned review/diff editors.
+---
+--- Diff editors are short-lived viewers and do not need project-wide language
+--- servers. Guard all public Neovim start paths, stop clients that attached before
+--- grove.nvim initialized, and retain an LspAttach fallback for integrations that
+--- cached or bypassed those functions. Outside a marked diff view this is a no-op.
+function M.setup_diff_view_guard()
+  if suppression_installed or not M.is_diff_view() then
+    return
+  end
+  suppression_installed = true
+
+  local lsp = vim.lsp
+
+  local original_enable = lsp.enable
+  if original_enable then
+    lsp.enable = function(name, enable)
+      -- Disabling must remain available so configs and teardown can clean up.
+      if enable == false then
+        return original_enable(name, false)
+      end
+      return nil
+    end
+  end
+
+  if lsp.start then
+    lsp.start = function()
+      return nil
+    end
+  end
+
+  if lsp.start_client then
+    lsp.start_client = function()
+      return nil
+    end
+  end
+
+  local function stop_client(client)
+    if client then
+      client:stop()
+    end
+  end
+
+  -- The marker is normally set before init, but a user's config may have started
+  -- an LSP before the plugin script was sourced. Shut those clients down as well.
+  if lsp.get_clients then
+    for _, client in ipairs(lsp.get_clients()) do
+      stop_client(client)
+    end
+  elseif lsp.get_active_clients then
+    for _, client in ipairs(lsp.get_active_clients()) do
+      stop_client(client)
+    end
+  end
+
+  local group = vim.api.nvim_create_augroup("GroveNvimDiffViewLspGuard", { clear = true })
+  vim.api.nvim_create_autocmd("LspAttach", {
+    group = group,
+    callback = function(args)
+      local client = lsp.get_client_by_id(args.data.client_id)
+      stop_client(client)
+    end,
+    desc = "grove: suppress LSP clients in diff views",
+  })
+end
+
 --- Finds the Grove root by searching upward for .grove/ directory
 --- @param start_path string The path to start searching from
 --- @return string|nil The grove root path, or nil if not found
