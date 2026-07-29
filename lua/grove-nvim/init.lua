@@ -66,6 +66,27 @@ local function setup_highlights()
   highlights_defined = true
 end
 
+--- Is buf a real file the user is editing, as opposed to scaffolding?
+---
+--- Excludes unloaded and unlisted buffers, everything with a non-empty
+--- 'buftype' (help, quickfix, terminal, prompt, nofile — netrw and most plugin
+--- UIs land here), and nameless scratch buffers. Used to decide whether the
+--- editor still has work open; see the QuitPre hook in M.setup.
+---@param buf integer
+---@return boolean
+local function is_real_file_buf(buf)
+  if not vim.api.nvim_buf_is_loaded(buf) then
+    return false
+  end
+  if not vim.bo[buf].buflisted then
+    return false
+  end
+  if vim.bo[buf].buftype ~= "" then
+    return false
+  end
+  return vim.api.nvim_buf_get_name(buf) ~= ""
+end
+
 --- Main setup function for the plugin
 function M.setup(opts)
   -- Also guard this entry point for configurations that call setup() directly
@@ -132,6 +153,30 @@ function M.setup(opts)
         io.stdout:flush()
       end,
       desc = "grove: clear nvim pane marker on exit",
+    })
+    -- Announce "done with my last file" so the host can hand focus back to
+    -- whatever pane sent us here (treemux's ":wq drops me back where I was").
+    --
+    -- Deliberately narrow: this fires only when the buffer being quit is the
+    -- LAST real file buffer. Closing one of several open files leaves the
+    -- signal silent, because someone with five files open is working in the
+    -- editor and should not be teleported out of it.
+    --
+    -- QuitPre also fires for the quit that ends the process. Emitting then is
+    -- harmless — the host moves focus first and its exit handling respects
+    -- that — so there is no need to predict whether this quit is the last one.
+    vim.api.nvim_create_autocmd("QuitPre", {
+      callback = function()
+        local leaving = vim.api.nvim_get_current_buf()
+        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+          if buf ~= leaving and is_real_file_buf(buf) then
+            return -- another file is still open; stay in the editor
+          end
+        end
+        io.stdout:write("\x1b]777;editor_done\x1b\\")
+        io.stdout:flush()
+      end,
+      desc = "grove: announce the last file buffer closing",
     })
   end
 
