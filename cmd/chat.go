@@ -10,6 +10,7 @@ import (
 	"github.com/grovetools/core/logging"
 	"github.com/grovetools/core/pkg/daemon"
 	"github.com/grovetools/core/pkg/models"
+	"github.com/grovetools/core/pkg/mux"
 	"github.com/grovetools/core/util/delegation"
 	"github.com/spf13/cobra"
 )
@@ -80,6 +81,26 @@ func newChatCmd() *cobra.Command {
 	return cmd
 }
 
+// chatSubmitRequest builds the daemon submission for a chat run. It is split out
+// from submitViaDaemon so the request's routing is unit-testable without a live
+// daemon.
+//
+// AgentTarget has to be derived here, in the process that still has the user's
+// terminal: groved inherited none of it, and an agent job that arrives untagged
+// is failed outright by the executor rather than guessed at. `chat` takes
+// whatever note the Neovim plugin has open — nothing restricts that to chat
+// jobs, so an interactive_agent job reaches this path too. The `flow run`
+// fallback in newChatCmd does not cover it either: that only fires when the
+// submission itself errors, and a job that queues successfully and then dies in
+// the executor never gets there.
+func chatSubmitRequest(planDir, jobFile string) models.JobSubmitRequest {
+	return models.JobSubmitRequest{
+		PlanDir:     planDir,
+		JobFile:     jobFile,
+		AgentTarget: mux.ResolveAgentTarget(),
+	}
+}
+
 // submitViaDaemon submits a job to the grove daemon's job runner.
 // The daemon handles execution in the background — this returns immediately.
 func submitViaDaemon(ctx context.Context, filePath string) error {
@@ -98,10 +119,7 @@ func submitViaDaemon(ctx context.Context, filePath string) error {
 	planDir := filepath.Dir(absPath)
 	jobFile := filepath.Base(absPath)
 
-	info, err := client.SubmitJob(ctx, models.JobSubmitRequest{
-		PlanDir: planDir,
-		JobFile: jobFile,
-	})
+	info, err := client.SubmitJob(ctx, chatSubmitRequest(planDir, jobFile))
 	if err != nil {
 		return fmt.Errorf("submit job: %w", err)
 	}
