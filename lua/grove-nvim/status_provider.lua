@@ -9,6 +9,8 @@ M.state = {
 }
 
 local stream_job_id = nil
+-- cwd the live stream was started with; the stream filters and focuses on it.
+local stream_cwd = nil
 
 -- A mapping from flow status strings to UI elements
 -- Colors match grove-flow TUI theme (Success=green, Info=blue, Error=red, Warning=orange, Highlight=yellow, Muted=gray, Magenta=magenta)
@@ -239,18 +241,48 @@ function M._process_line(line)
   if not ok then return end
   if not update or not update.update_type then return end
 
-  -- Workspace updates
+  -- Workspace snapshots. The daemon's git_status is the value we render; the
+  -- plugin no longer recomputes it locally.
   if update.workspaces then
     for _, ws in ipairs(update.workspaces) do
       if ws.path then
-        -- Merge stream data into cached workspace, preserving locally-polled git_status
+        -- A snapshot emitted before the daemon's first git scan carries no
+        -- git_status at all. The field only ever goes nil -> set (the workspace
+        -- collector copies enrichment forward across re-discovery), so keeping
+        -- the cached value on nil can't resurrect stale data — it only avoids
+        -- blanking the status bar on a cold daemon.
         local existing = M.state.workspaces[ws.path]
-        local local_git = existing and existing.git_status
-        ws.git_status = local_git  -- keep poll's git data, discard daemon's
+        if ws.git_status == nil and existing then
+          ws.git_status = existing.git_status
+        end
         M.state.workspaces[ws.path] = ws
       end
     end
     notify_update()
+  end
+
+  -- Enrichment deltas. Between full snapshots this is the ONLY way a
+  -- working-tree change reaches the plugin: the daemon's git watcher emits
+  -- `workspaces_delta`, never a fresh `workspaces` list. Ignoring these is what
+  -- made the daemon's git data look ~30s stale and motivated the old 3s poll.
+  -- Fields absent from a delta are unchanged (the Go side is `omitempty`), so
+  -- copy only what arrived.
+  if update.workspace_deltas then
+    local changed = false
+    for _, delta in ipairs(update.workspace_deltas) do
+      local cached = delta.path and M.state.workspaces[delta.path]
+      if cached then
+        for key, value in pairs(delta) do
+          if key ~= "path" then
+            cached[key] = value
+            changed = true
+          end
+        end
+      end
+    end
+    if changed then
+      notify_update()
+    end
   end
 
   -- Theme sync: dedicated theme_changed events carry the payload; the
@@ -285,48 +317,6 @@ function M._process_line(line)
   end
 end
 
--- Lightweight git-status poll for the current workspace.
--- The daemon stream provides git data but on a slow enrichment cycle (~30s).
--- This poll keeps it responsive for the active workspace only.
-local git_poll_timer = nil
-local git_poll_active = false
-
-local function poll_git_status()
-  if git_poll_active then return end
-
-  local utils = require('grove-nvim.utils')
-  local grove_nvim_path = utils.get_grove_nvim_binary()
-  if not grove_nvim_path then return end
-
-  local ws = M.get_current_workspace()
-  if not ws or not ws.path then return end
-
-  git_poll_active = true
-
-  vim.fn.jobstart({ grove_nvim_path, "internal", "git-status", ws.path }, {
-    stdout_buffered = true,
-    on_stdout = function(_, data)
-      if not data then return end
-      local stdout = table.concat(data, "\n")
-      local ok, status = pcall(vim.json.decode, stdout)
-      if ok and status and not vim.tbl_isempty(status) then
-        local cached = M.state.workspaces[ws.path]
-        if cached then
-          local old = cached.git_status
-          local changed = not old or vim.json.encode(old) ~= vim.json.encode(status)
-          cached.git_status = status
-          if changed then
-            notify_update()
-          end
-        end
-      end
-    end,
-    on_exit = function()
-      git_poll_active = false
-    end,
-  })
-end
-
 function M.start()
   if stream_job_id then return end
 
@@ -336,7 +326,12 @@ function M.start()
 
   local partial_line = ""
 
-  local cmd = {grove_nvim_path, 'internal', 'stream-state', vim.fn.getcwd()}
+  -- --focus registers this cwd's workspace as focused for as long as the
+  -- stream is open, so the daemon's git watcher keeps its per-file data warm
+  -- and content-only edits reach us as deltas. The lease is re-asserted inside
+  -- the stream process, so an idle editor spawns nothing at all.
+  stream_cwd = vim.fn.getcwd()
+  local cmd = {grove_nvim_path, 'internal', 'stream-state', '--focus', stream_cwd}
 
   stream_job_id = vim.fn.jobstart(cmd, {
     stdout_buffered = false,
@@ -378,18 +373,17 @@ function M.start()
         end
       end
     end,
-    on_exit = function()
+    on_exit = function(job_id)
+      -- Only the live stream's exit clears the handle. A restart (:cd) stops
+      -- the old job and starts a new one before the old on_exit lands, so an
+      -- unconditional clear here would drop the new stream's id and the
+      -- deferred retry below would then spawn a second stream alongside it.
+      if stream_job_id ~= job_id then return end
       stream_job_id = nil
       -- Retry connection after a short delay if it died
       vim.defer_fn(M.start, 5000)
     end
   })
-
-  -- Start git-status poll (3s interval, same as the old timer)
-  if not git_poll_timer then
-    poll_git_status() -- initial fetch
-    git_poll_timer = vim.fn.timer_start(3000, poll_git_status, { ['repeat'] = -1 })
-  end
 end
 
 function M.stop()
@@ -397,10 +391,17 @@ function M.stop()
     vim.fn.jobstop(stream_job_id)
     stream_job_id = nil
   end
-  if git_poll_timer then
-    vim.fn.timer_stop(git_poll_timer)
-    git_poll_timer = nil
-  end
+  stream_cwd = nil
+end
+
+--- Re-point the stream at a new cwd. Both the workspace filter and the focus
+--- registration are arguments to the stream process, so a :cd is followed by
+--- restarting it. on_exit re-arms M.start after 5s, so restart by stopping and
+--- starting directly rather than relying on that path.
+function M.refresh_cwd()
+  if vim.fn.getcwd() == stream_cwd then return end
+  M.stop()
+  M.start()
 end
 
 return M

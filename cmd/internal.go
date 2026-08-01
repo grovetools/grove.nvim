@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,11 +11,13 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/grovetools/core/config"
-	"github.com/grovetools/core/git"
 	grovelogging "github.com/grovetools/core/logging"
 	"github.com/grovetools/core/pkg/daemon"
+	"github.com/grovetools/core/pkg/models"
 	"github.com/grovetools/core/pkg/workspace"
 	"github.com/grovetools/core/util/pathutil"
 	"github.com/sirupsen/logrus"
@@ -80,14 +83,15 @@ func newInternalCmd() *cobra.Command {
 		Hidden: true, // Hide from standard help output
 	}
 	cmd.AddCommand(newResolveAliasesCmd())
-	cmd.AddCommand(newGitStatusCmd())
 	cmd.AddCommand(newStreamStateCmd())
 	cmd.AddCommand(newThemeCmd())
 	return cmd
 }
 
 func newStreamStateCmd() *cobra.Command {
-	return &cobra.Command{
+	var focus bool
+
+	cmd := &cobra.Command{
 		Use:   "stream-state [cwd]",
 		Short: "Stream daemon state updates as JSON lines, filtered to relevant workspaces",
 		Args:  cobra.MaximumNArgs(1),
@@ -110,18 +114,37 @@ func newStreamStateCmd() *cobra.Command {
 				return fmt.Errorf("daemon is not running")
 			}
 
-			stream, err := client.StreamState(cmd.Context())
+			ctx := cmd.Context()
+
+			stream, err := client.StreamState(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to stream state: %w", err)
+			}
+
+			// Focus registration rides this already-running process rather than
+			// a separate subcommand the editor would have to re-invoke: the
+			// daemon's leases expire, so "register once" is not a thing that
+			// exists, and a plugin-side re-assert timer would just be the git
+			// poll again at a longer period.
+			var registrar *focusRegistrar
+			if focus {
+				registrar = newFocusRegistrar(client)
+				defer registrar.Release()
+				go registrar.Run(ctx)
 			}
 
 			encoder := json.NewEncoder(os.Stdout)
 			for update := range stream {
 				// Filter workspaces to only those relevant to cwd
 				if len(update.Workspaces) > 0 {
+					if registrar != nil {
+						if path := containingWorkspace(cwd, update.Workspaces); path != "" {
+							registrar.Set(ctx, path)
+						}
+					}
 					filtered := update.Workspaces[:0]
 					for _, ws := range update.Workspaces {
-						if strings.HasPrefix(cwd, ws.Path) || strings.HasPrefix(ws.Path, cwd) {
+						if relevantToCwd(cwd, ws.Path) {
 							filtered = append(filtered, ws)
 						}
 					}
@@ -134,6 +157,25 @@ func newStreamStateCmd() *cobra.Command {
 					update.Workspaces = filtered
 				}
 
+				// Enrichment deltas carry the git status the plugin renders.
+				// They are the only path by which a working-tree edit reaches
+				// an editor between full snapshots, so they get the same cwd
+				// filter — without it the plugin either sees nothing (before
+				// this filter existed it dropped them) or the whole machine's
+				// churn.
+				if len(update.WorkspaceDeltas) > 0 {
+					filtered := update.WorkspaceDeltas[:0]
+					for _, d := range update.WorkspaceDeltas {
+						if relevantToCwd(cwd, d.Path) {
+							filtered = append(filtered, d)
+						}
+					}
+					if len(filtered) == 0 && update.Theme == nil {
+						continue // Had deltas but none relevant — skip
+					}
+					update.WorkspaceDeltas = filtered
+				}
+
 				if err := encoder.Encode(update); err != nil {
 					return err
 				}
@@ -142,6 +184,124 @@ func newStreamStateCmd() *cobra.Command {
 			return nil
 		},
 	}
+
+	cmd.Flags().BoolVar(&focus, "focus", false,
+		"register the containing workspace as focused with the daemon for as long as the stream is open")
+
+	return cmd
+}
+
+// focusReassertInterval re-asserts the lease well inside the daemon's
+// five-minute focus TTL (store.defaultFocusTTL), matching nav's cadence.
+const focusReassertInterval = 2 * time.Minute
+
+// focusRegistrar keeps a daemon focus lease alive for one workspace path.
+//
+// Focus is what makes the daemon's git watcher recompute per-file blob hashes
+// for a repo, which in turn is what lets a content-only edit — a re-edit of an
+// already-modified line, any change to an untracked or binary file — escape the
+// watcher's coarse GitStatusEqual suppression and reach the editor as a delta.
+// It is also what puts the repo in the fsnotify fallback's watch set on
+// platforms without recursive FSEvents. That is precisely the freshness the
+// deleted 3s poll was written for.
+//
+// The source is pid-scoped because SetFocus REPLACES a source's entire path
+// set: a bare "grove-nvim" would make every new editor evict every other
+// editor's focus. A lease from a dead editor expires on its own.
+type focusRegistrar struct {
+	client daemon.Client
+	source string
+
+	mu      sync.Mutex
+	current string
+}
+
+func newFocusRegistrar(client daemon.Client) *focusRegistrar {
+	return &focusRegistrar{
+		client: client,
+		source: fmt.Sprintf("grove-nvim:%d", os.Getpid()),
+	}
+}
+
+// Run re-asserts the current lease until ctx is done.
+func (f *focusRegistrar) Run(ctx context.Context) {
+	ticker := time.NewTicker(focusReassertInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			f.assert(ctx)
+		}
+	}
+}
+
+// Set points the lease at path, registering immediately when it changes.
+func (f *focusRegistrar) Set(ctx context.Context, path string) {
+	f.mu.Lock()
+	changed := path != f.current
+	f.current = path
+	f.mu.Unlock()
+	if changed {
+		f.assert(ctx)
+	}
+}
+
+func (f *focusRegistrar) assert(ctx context.Context) {
+	f.mu.Lock()
+	path := f.current
+	f.mu.Unlock()
+	if path == "" {
+		return
+	}
+	if err := f.client.SetFocus(ctx, f.source, []string{path}); err != nil {
+		ulog.Debug("Failed to register daemon focus").Err(err).Field("path", path).Emit()
+	}
+}
+
+// Release drops the lease immediately instead of waiting out its TTL. It uses
+// its own context because the stream's is already canceled by the time this
+// runs.
+func (f *focusRegistrar) Release() {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	_ = f.client.SetFocus(ctx, f.source, nil)
+}
+
+// relevantToCwd reports whether a workspace path is worth forwarding to an
+// editor rooted at cwd — either it contains cwd or cwd contains it. The match
+// is path-boundary aware, so an editor in /a/b is not sent /a/bc.
+func relevantToCwd(cwd, path string) bool {
+	return pathWithin(cwd, path) || pathWithin(path, cwd)
+}
+
+// pathWithin reports whether child is at or under parent, on directory
+// boundaries only.
+func pathWithin(child, parent string) bool {
+	if parent == "" || child == parent {
+		return true
+	}
+	return strings.HasPrefix(child, strings.TrimSuffix(parent, "/")+"/")
+}
+
+// containingWorkspace returns the longest workspace path containing cwd, which
+// is the workspace an editor rooted there is actually looking at. Empty when
+// cwd sits outside every workspace — focus is a claim about one repo, so there
+// is nothing honest to register in that case.
+func containingWorkspace(cwd string, workspaces []*models.EnrichedWorkspace) string {
+	best := ""
+	for _, ws := range workspaces {
+		// Path is promoted from an embedded *WorkspaceNode, so a nil node is a
+		// nil dereference, not an empty string.
+		if ws == nil || ws.WorkspaceNode == nil || ws.Path == "" {
+			continue
+		}
+		if pathWithin(cwd, ws.Path) && len(ws.Path) > len(best) {
+			best = ws.Path
+		}
+	}
+	return best
 }
 
 func newResolveAliasesCmd() *cobra.Command {
@@ -283,44 +443,6 @@ func newResolveAliasesCmd() *cobra.Command {
 			}
 			fmt.Println(string(jsonOutput))
 
-			return nil
-		},
-	}
-}
-
-func newGitStatusCmd() *cobra.Command {
-	return &cobra.Command{
-		Use:   "git-status [path]",
-		Short: "Get extended git status for a path",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			path := ""
-			if len(args) > 0 {
-				path = args[0]
-			} else {
-				var err error
-				path, err = os.Getwd()
-				if err != nil {
-					// On error, print empty JSON and exit cleanly
-					fmt.Println("{}")
-					return nil
-				}
-			}
-
-			status, err := git.GetExtendedStatus(path)
-			if err != nil {
-				// Not a git repo or other error, print empty JSON and exit cleanly
-				fmt.Println("{}")
-				return nil
-			}
-
-			jsonOutput, err := json.Marshal(status)
-			if err != nil {
-				// Should not happen, but handle gracefully
-				fmt.Println("{}")
-				return nil
-			}
-			fmt.Println(string(jsonOutput))
 			return nil
 		},
 	}

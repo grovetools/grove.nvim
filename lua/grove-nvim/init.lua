@@ -121,8 +121,21 @@ function M.setup(opts)
     end,
   })
 
-  -- Start the data fetching timers
+  -- Start the daemon state stream
   provider.start()
+
+  -- The stream's workspace filter and its daemon focus registration are both
+  -- arguments to the stream process, so a :cd has to re-point it. Global
+  -- scope only — a window/tab-local :lcd doesn't move what this editor is
+  -- working on.
+  vim.api.nvim_create_autocmd("DirChanged", {
+    group = vim.api.nvim_create_augroup("GroveNvimStreamCwd", { clear = true }),
+    pattern = "global",
+    callback = function()
+      provider.refresh_cwd()
+    end,
+    desc = "grove: re-point the daemon state stream at the new cwd",
+  })
 
   -- Set up spatial navigation keymaps (Ctrl+h/j/k/l) for grove terminal
   -- host pane traversal (groveterm and tuimux/treemux). Works as normal
